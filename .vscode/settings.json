@@ -1,0 +1,6 @@
+{
+    "code-runner.executorMap": {
+        "c": "cd $dir && gcc-9 $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+        "cpp": "cd $dir && g++-9 $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+    }
+}

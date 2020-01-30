@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerExplorerSettingsProvider">
+    <option name="enabled" value="false" />
+    <option name="localCompilerSettings">
+      <map>
+        <entry>
+          <key>
+            <LocalCompilerPath>
+              <option name="path" value="/usr/local/bin/gcc-9" />
+            </LocalCompilerPath>
+          </key>
+          <value>
+            <LocalCompilerSettings>
+              <option name="name" value="Clang" />
+              <option name="version" value="Using built-in specs. COLLECT_GCC=/usr/local/bin/gcc-9 COLLECT_LTO_WRAPPER=/usr/local/Cellar/gcc/9.2.0_1/libexec/gcc/x86_64-apple-darwin19/9.2.0/lto-wrapper Target: x86_64-apple-darwin19 Configured with: ../configure --build=x86_64-apple-darwin19 --prefix=/usr/local/Cellar/gcc/9.2.0_1 --libdir=/usr/local/Cellar/gcc/9.2.0_1/lib/gcc/9 --disable-nls --enable-checking=release --enable-languages=c,c++,objc,obj-c++,fortran --program-suffix=-9 --with-gmp=/usr/local/opt/gmp --with-mpfr=/usr/local/opt/mpfr --with-mpc=/usr/local/opt/libmpc --with-isl=/usr/local/opt/isl --with-system-zlib --with-pkgversion='Homebrew GCC 9.2.0_1' --with-bugurl=https://github.com/Homebrew/homebrew-core/issues --disable-multilib --with-native-system-header-dir=/usr/include --with-sysroot=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk Thread model: posix gcc version 9.2.0 (Homebrew GCC 9.2.0_1)  " />
+              <option name="target" value="x86_64" />
+            </LocalCompilerSettings>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
