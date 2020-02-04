@@ -30,8 +30,8 @@ ncopy:
 # You can modify this portion
 
 #	xorq 	%rax, %rax		# count = 0;
-	iaddq	$-8, %rdx
-	jle		r_test			# len >= 9
+	iaddq	$-9, %rdx
+	jle		r_test			# len >= 10
 
 
 loop0:
@@ -84,42 +84,61 @@ loop7:
 	jle 	loop8
 	iaddq	$1, %rax
 loop8:
+	mrmovq	72(%rdi), %r9
 	rmmovq	%r8, 64(%rsi)
 	andq	%r8, %r8
+	jle		loop9
+	iaddq	$1, %rax
+loop9:
+	rmmovq	%r9, 72(%rsi)
+	andq	%r9, %r9
 	jle		loop_end
 	iaddq	$1, %rax
 
 loop_end:
-	iaddq	$72, %rdi
-	iaddq	$72, %rsi
-	iaddq	$-9, %rdx
+	iaddq	$80, %rdi
+	iaddq	$80, %rsi
+	iaddq	$-10, %rdx
 	jg		loop0
 
 
 
 r_test:
-	iaddq	$4, %rdx		# [-8,0] -> [-4,4]	(+4)
+	iaddq	$4, %rdx		# [-9,0] -> [-5,4]	(+5)
 	jl		r_test_l
 	jg		r_test_r
-	jmp		r4
+	jmp		r5
 
 r_test_l:
-	iaddq	$2, %rdx		# [-4,-1] -> [-2,1]	(+2)
+	iaddq	$3, %rdx		# [-5,-1] -> [-2,2]	(+2)
 	je		r2
-	jg		r3
-	iaddq	$2, %rdx		# [-2,-1] -> [0,1]	(+0)
-	jg		r1
+	jg		r_test_lr
+
+r_test_ll:
+	iaddq	$1, %rdx		# [-2,-1] -> [-1,0]	(+1)
+	je		r1
 	ret
 
-r_test_r:
-	iaddq	$-2, %rdx		# [1,4] -> [-1,2]	(+6)
-	jl		r5
-	je		r6
-	iaddq	$-2, %rdx		# [1,2] -> [-1,0]	(+8)
-	jl		r7
+r_test_lr:
+	iaddq	$-1, %rdx		# [1,2] -> [0,1]	(+3)
+	je		r3
+	jg		r4
 
+r_test_r:
+	iaddq	$-2, %rdx		# [1,4] -> [-1,2]	(+7)
+	jl		r6
+	je		r7
+	iaddq	$-2, %rdx		# [1,2] -> [-1,0]	(+9)
+	jl		r8
+
+r9:
+	mrmovq	64(%rdi), %r10
+	rmmovq	%r10, 64(%rsi)
 r8:
+	andq	%r10, %r10
 	mrmovq	56(%rdi), %r10
+	jle		r8b				# 56(%rdi)
+	iaddq	$1, %rax
 r8b:
 	rmmovq	%r10, 56(%rsi)
 r7:
@@ -172,14 +191,9 @@ r1:
 	iaddq	$1, %rax
 r1b:
 	rmmovq	%r10, (%rsi)
-r1c:
 	andq	%r10, %r10
 	jle		Done
 	iaddq	$1, %rax
-	ret
-
-
-
 
 ##################################################################
 # Do not modify the following section of code
@@ -197,10 +211,10 @@ EndFun:
 ###############################
 	.align 8
 src:
-	.quad 1
+	.quad -1
 	.quad 2
 	.quad -3
-	.quad -4
+	.quad 4
 	.quad 0xbcdefa # This shouldn't get moved
 
 	.align 16
