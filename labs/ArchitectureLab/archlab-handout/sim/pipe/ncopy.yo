@@ -1,0 +1,96 @@
+                            | #/* $begin ncopy-ys */
+                            | ##################################################################
+                            | # ncopy.ys - Copy a src block of len words to dst.
+                            | # Return the number of positive words (>0) contained in src.
+                            | #
+                            | # Include your name and ID here.
+                            | #
+                            | # Describe how and why you modified the baseline code.
+                            | #
+                            | ##################################################################
+                            | # Do not modify this portion
+                            | # Function prologue.
+                            | # %rdi = src, %rsi = dst, %rdx = len
+0x000:                      | ncopy:
+                            | 
+                            | ##################################################################
+                            | # You can modify this portion
+                            | 
+                            | #	xorq 	%rax, %rax		# count = 0;
+0x000: c0f2fdffffffffffffff | 	iaddq	$-3, %rdx
+0x00a: 76cb00000000000000   | 	jg		loop0			# len >= 2
+0x013:                      | test_rest:
+0x013: c0f20300000000000000 | 	iaddq	$3, %rdx
+0x01d: 762700000000000000   | 	jg		rest0
+0x026: 90                   | 	ret
+0x027:                      | rest0:
+0x027: 50870000000000000000 | 	mrmovq	(%rdi), %r8
+0x031: 50970800000000000000 | 	mrmovq	8(%rdi), %r9
+0x03b: 40860000000000000000 | 	rmmovq	%r8, (%rsi)
+0x045: 6288                 | 	andq	%r8, %r8
+0x047: 715a00000000000000   | 	jle		rest0_t
+0x050: c0f00100000000000000 | 	iaddq	$1, %rax
+0x05a:                      | rest0_t:
+0x05a: c0f2ffffffffffffffff | 	iaddq	$-1, %rdx
+0x064: 766e00000000000000   | 	jg		rest1
+0x06d: 90                   | 	ret
+0x06e:                      | rest1:
+0x06e: 50a71000000000000000 | 	mrmovq	16(%rdi), %r10
+0x078: 40960800000000000000 | 	rmmovq	%r9, 8(%rsi)
+0x082: 6299                 | 	andq	%r9, %r9
+0x084: 719700000000000000   | 	jle		rest1_t
+0x08d: c0f00100000000000000 | 	iaddq	$1, %rax
+0x097:                      | rest1_t:
+0x097: c0f2ffffffffffffffff | 	iaddq	$-1, %rdx
+0x0a1: 76ab00000000000000   | 	jg 		rest2
+0x0aa: 90                   | 	ret
+0x0ab:                      | rest2:
+0x0ab: 40a61000000000000000 | 	rmmovq	%r10, 16(%rsi)
+0x0b5: 62aa                 | 	andq	%r10, %r10
+0x0b7: 719f01000000000000   | 	jle		Done
+0x0c0: c0f00100000000000000 | 	iaddq	$1, %rax
+0x0ca: 90                   | 	ret
+                            | 
+                            | 
+0x0cb:                      | loop0:
+0x0cb: 50870000000000000000 | 	mrmovq	(%rdi), %r8
+0x0d5: c0f72000000000000000 | 	iaddq	$32, %rdi
+0x0df: 40860000000000000000 | 	rmmovq	%r8, (%rsi)
+0x0e9: 6288                 | 	andq	%r8, %r8
+0x0eb: 71fe00000000000000   | 	jle		loop1
+0x0f4: c0f00100000000000000 | 	iaddq	$1, %rax
+0x0fe:                      | loop1:
+0x0fe: 5087e8ffffffffffffff | 	mrmovq	-24(%rdi), %r8
+0x108: c0f62000000000000000 | 	iaddq	$32, %rsi
+0x112: 4086e8ffffffffffffff | 	rmmovq	%r8, -24(%rsi)
+0x11c: 6288                 | 	andq	%r8, %r8
+0x11e: 713101000000000000   | 	jle 	loop2
+0x127: c0f00100000000000000 | 	iaddq	$1, %rax
+0x131:                      | loop2:
+0x131: 5087f0ffffffffffffff | 	mrmovq	-16(%rdi), %r8
+0x13b: 5097f8ffffffffffffff | 	mrmovq	-8(%rdi), %r9
+0x145: 4086f0ffffffffffffff | 	rmmovq	%r8, -16(%rsi)
+0x14f: 6288                 | 	andq	%r8, %r8
+0x151: 716401000000000000   | 	jle 	loop3
+0x15a: c0f00100000000000000 | 	iaddq	$1, %rax
+0x164:                      | loop3:
+0x164: 4096f8ffffffffffffff | 	rmmovq	%r9, -8(%rsi)
+0x16e: 6299                 | 	andq	%r9, %r9
+0x170: 718301000000000000   | 	jle		loop_end
+0x179: c0f00100000000000000 | 	iaddq	$1, %rax
+                            | 
+0x183:                      | loop_end:
+0x183: c0f2fcffffffffffffff | 	iaddq	$-4, %rdx
+0x18d: 76cb00000000000000   | 	jg		loop0
+0x196: 701300000000000000   | 	jmp		test_rest
+                            | 
+                            | 
+                            | ##################################################################
+                            | # Do not modify the following section of code
+                            | # Function epilogue.
+0x19f:                      | Done:
+0x19f: 90                   | 	ret
+                            | ##################################################################
+                            | # Keep the following label at the end of your function
+0x1a0:                      | End:
+                            | #/* $end ncopy-ys */

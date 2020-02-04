@@ -17,35 +17,70 @@ ncopy:
 # You can modify this portion
 
 #	xorq 	%rax, %rax		# count = 0;
-	iaddq	$-1, %rdx
+	iaddq	$-3, %rdx
 	jg		loop0			# len >= 2
 test_rest:
-	iaddq	$1, %rdx
-	jg		rest
+	iaddq	$3, %rdx
+	jg		rest0
 	ret
-rest:
+rest0:
 	mrmovq	(%rdi), %r8
+	mrmovq	8(%rdi), %r9
 	rmmovq	%r8, (%rsi)
 	andq	%r8, %r8
+	jle		rest0_t
+	iaddq	$1, %rax
+rest0_t:
+	iaddq	$-1, %rdx
+	jg		rest1
+	ret
+rest1:
+	mrmovq	16(%rdi), %r10
+	rmmovq	%r9, 8(%rsi)
+	andq	%r9, %r9
+	jle		rest1_t
+	iaddq	$1, %rax
+rest1_t:
+	iaddq	$-1, %rdx
+	jg 		rest2
+	ret
+rest2:
+	rmmovq	%r10, 16(%rsi)
+	andq	%r10, %r10
 	jle		Done
 	iaddq	$1, %rax
 	ret
+
+
 loop0:
 	mrmovq	(%rdi), %r8
-	iaddq	$16, %rdi
+	iaddq	$32, %rdi
 	rmmovq	%r8, (%rsi)
 	andq	%r8, %r8
 	jle		loop1
 	iaddq	$1, %rax
 loop1:
-	mrmovq	-8(%rdi), %r8
-	iaddq	$16, %rsi
-	rmmovq	%r8, -8(%rsi)
+	mrmovq	-24(%rdi), %r8
+	iaddq	$32, %rsi
+	rmmovq	%r8, -24(%rsi)
 	andq	%r8, %r8
 	jle 	loop2
 	iaddq	$1, %rax
 loop2:
-	iaddq	$-2, %rdx
+	mrmovq	-16(%rdi), %r8
+	mrmovq	-8(%rdi), %r9
+	rmmovq	%r8, -16(%rsi)
+	andq	%r8, %r8
+	jle 	loop3
+	iaddq	$1, %rax
+loop3:
+	rmmovq	%r9, -8(%rsi)
+	andq	%r9, %r9
+	jle		loop_end
+	iaddq	$1, %rax
+
+loop_end:
+	iaddq	$-4, %rdx
 	jg		loop0
 	jmp		test_rest
 
