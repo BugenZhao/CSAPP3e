@@ -119,17 +119,17 @@ r9:
 	mrmovq	64(%rdi), %r10
 	rmmovq	%r10, 64(%rsi)
 r8:
+	# %r10 was never used before. Directly jumping to r7 means %r10 = 0.
 	andq	%r10, %r10
 	mrmovq	56(%rdi), %r10
-	jle		r8b				# 56(%rdi)
+	jle		r8b				# 64(%rdi) <- PREVIOUS ELEMENT
 	iaddq	$1, %rax
 r8b:
 	rmmovq	%r10, 56(%rsi)
 r7:
-	# %r10 was never used before. Directly jumping to r7 means %r10 = 0.
 	andq	%r10, %r10
 	mrmovq	48(%rdi), %r10
-	jle		r7b				# 56(%rdi)
+	jle		r7b
 	iaddq	$1, %rax
 r7b:
 	rmmovq	%r10, 48(%rsi)
