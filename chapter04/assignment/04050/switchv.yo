@@ -1,0 +1,93 @@
+                            | # Execution begins at address 0
+0x000:                      | 	.pos 0
+0x000: 30f40004000000000000 | 	irmovq	stack, %rsp
+0x00a: 801001000000000000   | 	call	main
+0x013: 00                   | 	halt
+                            | 
+                            | 
+0x014:                      | table:
+0x014: a300000000000000     | 	.quad L0
+0x01c: c400000000000000     | 	.quad LD
+0x024: ae00000000000000     | 	.quad L2
+0x02c: b900000000000000     | 	.quad L3
+0x034: c400000000000000     | 	.quad LD
+0x03c: ae00000000000000     | 	.quad L5
+                            | 
+0x044:                      | switchv:
+0x044: 30f80800000000000000 | 	irmovq	$8, %r8
+0x04e: 30f90500000000000000 | 	irmovq	$5, %r9
+0x058: 30fa0000000000000000 | 	irmovq	$0, %r10
+0x062: 30fb0100000000000000 | 	irmovq	$1, %r11
+0x06c: 30f61400000000000000 | 	irmovq	table, %rsi
+0x076: 6277                 | 	andq 	%rdi, %rdi
+0x078: 72c400000000000000   | 	jl		LD
+0x081: 2070                 | 	rrmovq	%rdi, %rax
+0x083: 6190                 | 	subq	%r9, %rax
+0x085: 76c400000000000000   | 	jg		LD
+0x08e: 6077                 | 	addq	%rdi, %rdi
+0x090: 6077                 | 	addq	%rdi, %rdi
+0x092: 6077                 | 	addq	%rdi, %rdi
+0x094: 6067                 | 	addq	%rsi, %rdi
+0x096: 50770000000000000000 | 	mrmovq	(%rdi), %rdi
+0x0a0: a07f                 | 	pushq	%rdi
+0x0a2: 90                   | 	ret
+0x0a3:                      | L0:
+0x0a3: 30f0aa0a000000000000 | 	irmovq	$0xaaa, %rax
+0x0ad: 90                   | 	ret
+0x0ae:                      | L2:
+0x0ae:                      | L5:
+0x0ae: 30f0bb0b000000000000 | 	irmovq	$0xbbb, %rax
+0x0b8: 90                   | 	ret
+0x0b9:                      | L3:
+0x0b9: 30f0cc0c000000000000 | 	irmovq	$0xccc, %rax
+0x0c3: 90                   | 	ret
+0x0c4:                      | LD:
+0x0c4: 30f0dd0d000000000000 | 	irmovq	$0xddd, %rax
+0x0ce: 90                   | 	ret
+                            | 
+                            | 
+0x0d0:                      | .align 8
+0x0d0:                      | array:
+0x0d0: 0000000000000000     | 	.quad 0x0000000000000000
+0x0d8: 0000000000000000     | 	.quad 0x0000000000000000
+0x0e0: 0000000000000000     | 	.quad 0x0000000000000000
+0x0e8: 0000000000000000     | 	.quad 0x0000000000000000
+0x0f0: 0000000000000000     | 	.quad 0x0000000000000000
+0x0f8: 0000000000000000     | 	.quad 0x0000000000000000
+0x100: 0000000000000000     | 	.quad 0x0000000000000000
+0x108: 0000000000000000     | 	.quad 0x0000000000000000
+                            | 
+0x110:                      | main:
+0x110: 30fed000000000000000 | 	irmovq	array, %r14
+                            | 
+0x11a: 30f7ffffffffffffffff | 	irmovq	$-1, %rdi
+0x124: 804400000000000000   | 	call	switchv
+0x12d: 400e0000000000000000 | 	rmmovq	%rax, (%r14)
+0x137: 30f70000000000000000 | 	irmovq	$0, %rdi
+0x141: 804400000000000000   | 	call	switchv
+0x14a: 400e0800000000000000 | 	rmmovq	%rax, 0x8(%r14)
+0x154: 30f70100000000000000 | 	irmovq	$1, %rdi
+0x15e: 804400000000000000   | 	call	switchv
+0x167: 400e1000000000000000 | 	rmmovq	%rax, 0x10(%r14)
+0x171: 30f70200000000000000 | 	irmovq	$2, %rdi
+0x17b: 804400000000000000   | 	call	switchv
+0x184: 400e1800000000000000 | 	rmmovq	%rax, 0x18(%r14)
+0x18e: 30f70300000000000000 | 	irmovq	$3, %rdi
+0x198: 804400000000000000   | 	call	switchv
+0x1a1: 400e2000000000000000 | 	rmmovq	%rax, 0x20(%r14)
+0x1ab: 30f70400000000000000 | 	irmovq	$4, %rdi
+0x1b5: 804400000000000000   | 	call	switchv
+0x1be: 400e2800000000000000 | 	rmmovq	%rax, 0x28(%r14)
+0x1c8: 30f70500000000000000 | 	irmovq	$5, %rdi
+0x1d2: 804400000000000000   | 	call	switchv
+0x1db: 400e3000000000000000 | 	rmmovq	%rax, 0x30(%r14)
+0x1e5: 30f70600000000000000 | 	irmovq	$6, %rdi
+0x1ef: 804400000000000000   | 	call	switchv
+0x1f8: 400e3800000000000000 | 	rmmovq	%rax, 0x38(%r14)
+                            | 
+                            | 
+                            | 
+                            | 
+                            | # Stack starts here and grows to lower addresses
+0x400:                      | 	.pos 0x400
+0x400:                      | stack:
