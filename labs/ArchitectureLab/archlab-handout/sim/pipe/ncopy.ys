@@ -88,35 +88,32 @@ loop_end:
 	iaddq	$-10, %rdx
 	jg		loop0
 
-
-
 r_test:
-	iaddq	$4, %rdx		# [-9,0] -> [-5,4]	(+5)
+	iaddq	$6, %rdx		# [-9,0] -> [-3,6]	(+3)
 	jl		r_test_l
 	jg		r_test_r
-	jmp		r5
+	jmp		r3
 
 r_test_l:
-	iaddq	$3, %rdx		# [-5,-1] -> [-2,2]	(+2)
-	je		r2
-	jg		r_test_lr
-
-r_test_ll:
-	iaddq	$1, %rdx		# [-2,-1] -> [-1,0]	(+1)
+	iaddq	$2, %rdx		# [-3,-1] -> [-1,1]	(+1)
 	je		r1
+	jg		r2
 	ret
 
-r_test_lr:
-	iaddq	$-1, %rdx		# [1,2] -> [0,1]	(+3)
-	je		r3
-	jg		r4
-
 r_test_r:
-	iaddq	$-2, %rdx		# [1,4] -> [-1,2]	(+7)
-	jl		r6
-	je		r7
-	iaddq	$-2, %rdx		# [1,2] -> [-1,0]	(+9)
-	jl		r8
+	iaddq	$-3, %rdx		# [1,6] -> [-2,3]	(+6)
+	jg		r_test_rr
+	je		r6
+
+r_test_rl:
+	iaddq	$1, %rdx		# [-2,-1] -> [-1,0]	(+5)
+	jl		r4
+	je		r5
+
+r_test_rr:
+	iaddq	$-2, %rdx		# [1,3] -> [-1,1]	(+8)
+	jl		r7
+	je		r8
 
 r9:
 	mrmovq	64(%rdi), %r10
