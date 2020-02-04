@@ -1,0 +1,65 @@
+# Execution begins at address 0
+	.pos 0
+	irmovq	stack, %rsp
+	call	main
+	halt
+
+bubble_a:
+	irmovq	$8, %r9
+	addq	%rsi, %rsi
+	addq	%rsi, %rsi
+	addq	%rsi, %rsi
+	subq	%r9, %rsi
+	addq	%rdi, %rsi
+	jmp		test
+
+update_inner:
+	addq	%r9, %rax
+
+loop:
+	rrmovq	%rsi, %r8
+	subq	%rax, %r8
+	jle		update_outer
+	mrmovq	8(%rax), %rdx
+	mrmovq 	(%rax), %rcx
+	rrmovq	%rdx, %r8
+	subq	%rcx, %r8
+	jge		update_inner
+	rmmovq	%rcx, 8(%rax)
+	rmmovq	%rdx, (%rax)
+	jmp		update_inner
+
+update_outer:
+	subq	%r9, %rsi
+
+test:
+	rrmovq	%rsi, %r8
+	subq	%rdi, %r8
+	je		return
+	rrmovq	%rdi, %rax
+	jmp		loop
+
+return:
+	ret
+
+
+# Array of 4 elements
+.align 8
+data:
+  	.quad 0x0000000000000004
+  	.quad 0x0000000000000003
+  	.quad 0x0000000000000002
+  	.quad 0x0000000000000001
+
+
+main:
+  	irmovq 	data, %rdi
+    irmovq 	$4, %rsi
+    call 	bubble_a
+    ret
+
+
+
+# Stack starts here and grows to lower addresses
+    .pos 0x200
+stack:

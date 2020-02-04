@@ -1,0 +1,93 @@
+# Execution begins at address 0
+	.pos 0
+	irmovq	stack, %rsp
+	call	main
+	halt
+
+
+table:
+	.quad L0
+	.quad LD
+	.quad L2
+	.quad L3
+	.quad LD
+	.quad L5
+
+switchv:
+	irmovq	$8, %r8
+	irmovq	$5, %r9
+	irmovq	$0, %r10
+	irmovq	$1, %r11
+	irmovq	table, %rsi
+	andq 	%rdi, %rdi
+	jl		LD
+	rrmovq	%rdi, %rax
+	subq	%r9, %rax
+	jg		LD
+	addq	%rdi, %rdi
+	addq	%rdi, %rdi
+	addq	%rdi, %rdi
+	addq	%rsi, %rdi
+	mrmovq	(%rdi), %rdi	# !!
+	pushq	%rdi			# jump table
+	ret
+L0:
+	irmovq	$0xaaa, %rax
+	ret
+L2:
+L5:
+	irmovq	$0xbbb, %rax
+	ret
+L3:
+	irmovq	$0xccc, %rax
+	ret
+LD:
+	irmovq	$0xddd, %rax
+	ret
+
+
+.align 8
+array:
+	.quad 0x0000000000000000
+	.quad 0x0000000000000000
+	.quad 0x0000000000000000
+	.quad 0x0000000000000000
+	.quad 0x0000000000000000
+	.quad 0x0000000000000000
+	.quad 0x0000000000000000
+	.quad 0x0000000000000000
+
+main:
+	irmovq	array, %r14
+
+	irmovq	$-1, %rdi
+	call	switchv
+	rmmovq	%rax, (%r14)
+	irmovq	$0, %rdi
+	call	switchv
+	rmmovq	%rax, 0x8(%r14)
+	irmovq	$1, %rdi
+	call	switchv
+	rmmovq	%rax, 0x10(%r14)
+	irmovq	$2, %rdi
+	call	switchv
+	rmmovq	%rax, 0x18(%r14)
+	irmovq	$3, %rdi
+	call	switchv
+	rmmovq	%rax, 0x20(%r14)
+	irmovq	$4, %rdi
+	call	switchv
+	rmmovq	%rax, 0x28(%r14)
+	irmovq	$5, %rdi
+	call	switchv
+	rmmovq	%rax, 0x30(%r14)
+	irmovq	$6, %rdi
+	call	switchv
+	rmmovq	%rax, 0x38(%r14)
+
+
+
+# Stack starts here and grows to lower addresses
+# Don't be too low!!!
+	.pos 0x400
+stack:
