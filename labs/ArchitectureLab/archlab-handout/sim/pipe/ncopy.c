@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-typedef word_t word_t;
+typedef long word_t;
 
 word_t src[8], dst[8];
 

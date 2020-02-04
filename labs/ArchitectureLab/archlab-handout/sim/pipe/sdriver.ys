@@ -28,24 +28,41 @@ ncopy:
 
 ##################################################################
 # You can modify this portion
-	# Loop header
-	xorq %rax,%rax		# count = 0;
-	andq %rdx,%rdx		# len <= 0?
-	jle Done		# if so, goto Done:
 
-Loop:	mrmovq (%rdi), %r10	# read val from src...
-	rmmovq %r10, (%rsi)	# ...and store it to dst
-	andq %r10, %r10		# val <= 0?
-	jle Npos		# if so, goto Npos:
-	irmovq $1, %r10
-	addq %r10, %rax		# count++
-Npos:	irmovq $1, %r10
-	subq %r10, %rdx		# len--
-	irmovq $8, %r10
-	addq %r10, %rdi		# src++
-	addq %r10, %rsi		# dst++
-	andq %rdx,%rdx		# len > 0?
-	jg Loop			# if so, goto Loop:
+#	xorq 	%rax, %rax		# count = 0;
+	iaddq	$-1, %rdx
+	jg		loop0			# len >= 2
+test_rest:
+	iaddq	$1, %rdx
+	jg		rest
+	ret
+rest:
+	mrmovq	(%rdi), %r8
+	rmmovq	%r8, (%rsi)
+	andq	%r8, %r8
+	jle		Done
+	iaddq	$1, %rax
+	ret
+loop0:
+	mrmovq	(%rdi), %r8
+	iaddq	$16, %rdi
+	rmmovq	%r8, (%rsi)
+	andq	%r8, %r8
+	jle		loop1
+	iaddq	$1, %rax
+loop1:
+	mrmovq	-8(%rdi), %r8
+	iaddq	$16, %rsi
+	rmmovq	%r8, -8(%rsi)
+	andq	%r8, %r8
+	jle 	loop2
+	iaddq	$1, %rax
+loop2:
+	iaddq	$-2, %rdx
+	jg		loop0
+	jmp		test_rest
+
+
 ##################################################################
 # Do not modify the following section of code
 # Function epilogue.
@@ -62,10 +79,10 @@ EndFun:
 ###############################
 	.align 8
 src:
-	.quad -1
+	.quad 1
 	.quad 2
 	.quad -3
-	.quad 4
+	.quad -4
 	.quad 0xbcdefa # This shouldn't get moved
 
 	.align 16
