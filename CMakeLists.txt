@@ -22,3 +22,4 @@ add_executable(add_testing chapter03/experiment/add_testing.c chapter03/experime
 add_executable(rfact_testing chapter03/experiment/rfact_testing.c chapter03/experiment/rfact.s)
 add_executable(bomb labs/BombLab/bomb/bomb.c)
 add_executable(bubble chapter04/assignment/04047/bubble.c)
+add_subdirectory(labs/CacheLab/cachelab-handout)
