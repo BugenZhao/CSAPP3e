@@ -23,3 +23,7 @@ add_executable(rfact_testing chapter03/experiment/rfact_testing.c chapter03/expe
 add_executable(bomb labs/BombLab/bomb/bomb.c)
 add_executable(bubble chapter04/assignment/04047/bubble.c)
 add_subdirectory(labs/CacheLab/cachelab-handout)
+add_executable(mysystem chapter08/assignment/08022/mysystem.c)
+add_executable(waitpid chapter08/assignment/08024/waitpid.c)
+add_executable(tfgets chapter08/assignment/08025/tfgets.c)
+add_subdirectory(labs/ShellLab/shlab-handout)
