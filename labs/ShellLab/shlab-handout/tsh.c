@@ -182,6 +182,12 @@ int main(int argc, char **argv) {
  * when we type ctrl-c (ctrl-z) at the keyboard.  
 */
 void eval(char *cmdline) {
+    char *argv[MAXARGS];
+    int bg_flag;
+    bg_flag = parseline(cmdline, argv);
+    if (builtin_cmd(argv)) {
+        return;
+    }
     return;
 }
 
@@ -244,6 +250,18 @@ int parseline(const char *cmdline, char **argv) {
  *    it immediately.  
  */
 int builtin_cmd(char **argv) {
+    char *cmd = argv[0];
+    if (cmd == NULL) {
+        return 1;
+    } else if (!strcmp(cmd, "quit")) {
+        exit(0);
+    } else if (!strcmp(cmd, "jobs")) {
+        listjobs(jobs);
+        return 1;
+    } else if (!strcmp(cmd, "bg") || !strcmp(cmd, "fg")) {
+        do_bgfg(argv);
+        return 1;
+    }
     return 0;     /* not a builtin command */
 }
 
