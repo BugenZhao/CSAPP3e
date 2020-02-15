@@ -186,27 +186,48 @@ void eval(char *cmdline) {
     char buf[MAXLINE];
     int bg;
     pid_t pid;
+    sigset_t mask_chld, prev;
 
     strcpy(buf, cmdline);
     bg = parseline(buf, argv);
     if (argv[0] == NULL) return;
 
-    if (!builtin_cmd(argv)) {
-        if ((pid = fork()) == 0) {
-            if (execve(argv[0], argv, environ) < 0) {
-                printf("%s: Command not found.\n", argv[0]);
-                exit(0);
-            }
-        }
-        if (!bg) {
-            int status;
-            if (waitpid(pid, &status, 0) < 0)
-                unix_error("waitfg: waitpid error");
-        } else {
-            printf("%d %s", pid, cmdline);
-        }
+    // builtin command
+    if (builtin_cmd(argv)) return;
+
+    // not builtin command
+    // is program accessible?
+    if (access(argv[0], X_OK) < 0) {
+        printf("%s: Command not found.\n", argv[0]);
+        return;
     }
-    return;
+    // block SIGCHLD
+    sigemptyset(&mask_chld);
+    sigaddset(&mask_chld, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &mask_chld, &prev);
+
+    if ((pid = fork()) == 0) {
+        // child
+        // restore signal mask
+        sigprocmask(SIG_SETMASK, &prev, NULL);
+        if (setpgid(0, 0) < 0)
+            unix_error("failed to set pgid");
+        if (execve(argv[0], argv, environ) < 0)
+            unix_error("failed to execve");
+    }
+
+    // shell
+    if (!bg) {
+        addjob(jobs, pid, FG, cmdline);
+        sigprocmask(SIG_BLOCK, &prev, NULL);
+        int status;
+        if (waitpid(pid, &status, 0) < 0)
+            unix_error("waitfg: waitpid error");
+    } else {
+        addjob(jobs, pid, BG, cmdline);
+        sigprocmask(SIG_BLOCK, &prev, NULL);
+        printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
+    }
 }
 
 /* 
@@ -271,7 +292,7 @@ int builtin_cmd(char **argv) {
     char *cmd = argv[0];
     if (cmd == NULL) {
         return 1;
-    } else if (!strcmp(cmd, "quit")) {
+    } else if (!strcmp(cmd, "quit") || !strcmp(cmd, "exit")) {
         exit(0);
     } else if (!strcmp(cmd, "jobs")) {
         listjobs(jobs);
