@@ -1,1 +1,1 @@
-add_executable(tsh_macos tsh.c myint.c myspin.c mysplit.c mystop.c)
+add_executable(tsh_macos tsh.c)
