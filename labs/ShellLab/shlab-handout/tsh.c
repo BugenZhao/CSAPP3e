@@ -208,7 +208,7 @@ void eval(char *cmdline) {
         if (setpgid(0, 0) < 0)
             unix_error("failed to set pgid");
         if (execve(argv[0], argv, environ) < 0) {
-            printf("%s: Command not found.\n", argv[0]);
+            printf("%s: Command not found\n", argv[0]);
             exit(0);
         }
     }
@@ -328,6 +328,7 @@ void do_bgfg(char **argv) {
         printf("%s: argument must be a PID or %%jobid\n", argv[0]);
         return;
     }
+
     if (!strcmp(argv[0], "bg")) {
         job->state = BG;
         // send SIGCONT to process group
