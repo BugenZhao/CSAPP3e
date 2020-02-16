@@ -207,7 +207,7 @@ void eval(char *cmdline) {
         sigprocmask(SIG_SETMASK, &prev, NULL);
         if (setpgid(0, 0) < 0)
             unix_error("failed to set pgid");
-        if (execve(argv[0], argv, environ) < 0) {
+        if (execvp(argv[0], argv) < 0) {
             printf("%s: Command not found\n", argv[0]);
             exit(0);
         }
@@ -364,16 +364,17 @@ void waitfg(pid_t pid) {
 void sigchld_handler(int sig) {
     // some jobs terminated or stopped
     int old_errno = errno;
+
     pid_t pid;
     int status;
     sigset_t mask_all, prev;
     sigfillset(&mask_all);
 
     while (1) {
-        // return immediately
+        // return immediately!
         pid = waitpid(-1, &status, WNOHANG | WUNTRACED);
         if (pid <= 0) break; // all jobs are processed
-
+        // block all signals for safe
         sigprocmask(SIG_BLOCK, &mask_all, &prev);
 
         if (WIFEXITED(status)) { // exited normally
