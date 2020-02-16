@@ -327,7 +327,6 @@ void waitfg(pid_t pid) {
  *     currently running children to terminate.  
  */
 void sigchld_handler(int sig) {
-//    printf("SIGCHLD!!!\n");
     // some jobs terminated or stopped
     int old_errno = errno;
     pid_t pid;
@@ -365,6 +364,7 @@ void sigchld_handler(int sig) {
  *    to the foreground job.  
  */
 void sigint_handler(int sig) {
+    // forward SIGINT only to fg job
     int old_errno = errno;
     pid_t pid = fgpid(jobs);
     if (pid != 0) kill(pid, SIGINT);
@@ -377,7 +377,11 @@ void sigint_handler(int sig) {
  *     foreground job by sending it a SIGTSTP.  
  */
 void sigtstp_handler(int sig) {
-    return;
+    // forward SIGSTOP only to fg job
+    int old_errno = errno;
+    pid_t pid = fgpid(jobs);
+    if (pid != 0) kill(pid, SIGSTOP);
+    errno = old_errno;
 }
 
 /*********************
