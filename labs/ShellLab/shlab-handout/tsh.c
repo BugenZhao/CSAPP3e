@@ -377,10 +377,10 @@ void sigint_handler(int sig) {
  *     foreground job by sending it a SIGTSTP.  
  */
 void sigtstp_handler(int sig) {
-    // forward SIGSTOP only to fg job
+    // forward SIGTSTP (stopped by terminal) only to fg job
     int old_errno = errno;
     pid_t pid = fgpid(jobs);
-    if (pid != 0) kill(pid, SIGSTOP);
+    if (pid != 0) kill(pid, SIGTSTP);
     errno = old_errno;
 }
 
