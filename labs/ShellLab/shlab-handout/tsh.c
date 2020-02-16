@@ -403,7 +403,8 @@ void sigint_handler(int sig) {
     // forward SIGINT only to fg job
     int old_errno = errno;
     pid_t pid = fgpid(jobs);
-    if (pid != 0) kill(pid, SIGINT);
+    // send SIGINT to process group
+    if (pid != 0) kill(-pid, SIGINT);
     errno = old_errno;
 }
 
@@ -416,7 +417,7 @@ void sigtstp_handler(int sig) {
     // forward SIGTSTP (stopped by terminal) only to fg job
     int old_errno = errno;
     pid_t pid = fgpid(jobs);
-    if (pid != 0) kill(pid, SIGTSTP);
+    if (pid != 0) kill(-pid, SIGTSTP);
     errno = old_errno;
 }
 
