@@ -303,7 +303,32 @@ int builtin_cmd(char **argv) {
  * do_bgfg - Execute the builtin bg and fg commands
  */
 void do_bgfg(char **argv) {
-    return;
+    if (argv[1] == NULL) {
+        printf("%s command requires PID or %%jobid argument\n", argv[0]);
+        return;
+    }
+    int id;
+    struct job_t *job;
+    if (sscanf(argv[1], "%%%d", &id) > 0) {
+        // got jid
+        job = getjobjid(jobs, id);
+        if (job == NULL) printf("%%%d: No such job\n", id);
+    } else if (sscanf(argv[1], "%d", &id) > 0) {
+        // got pid
+        job = getjobpid(jobs, id);
+        if (job == NULL) printf("(%d): No such process\n", id);
+    } else {
+        // wrong format
+        printf("%s: argument must be a PID or %%jobid\n", argv[0]);
+        return;
+    }
+    if (!strcmp(argv[0], "bg")) {
+        job->state = BG;
+        kill(job->pid, SIGCONT);
+        printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
+    } else {
+
+    }
 }
 
 /* 
@@ -346,10 +371,12 @@ void sigchld_handler(int sig) {
         } else if (WIFSIGNALED(status)) { // terminated by signal
             printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
             deletejob(jobs, pid);
-        } else { // stopped
+        } else if (WIFSTOPPED(status)) { // stopped
             struct job_t *job = getjobpid(jobs, pid);
-            printf("Job [%d] (%d) stopped\n", job->jid, pid);
+            printf("Job [%d] (%d) stopped by signal %d\n", job->jid, pid, WSTOPSIG(status));
             job->state = ST;
+        } else {
+            unix_error("sigchld_handler error");
         }
 
         sigprocmask(SIG_SETMASK, &prev, NULL);
