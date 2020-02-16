@@ -312,11 +312,17 @@ void do_bgfg(char **argv) {
     if (sscanf(argv[1], "%%%d", &id) > 0) {
         // got jid
         job = getjobjid(jobs, id);
-        if (job == NULL) printf("%%%d: No such job\n", id);
+        if (job == NULL) {
+            printf("%%%d: No such job\n", id);
+            return;
+        }
     } else if (sscanf(argv[1], "%d", &id) > 0) {
         // got pid
         job = getjobpid(jobs, id);
-        if (job == NULL) printf("(%d): No such process\n", id);
+        if (job == NULL) {
+            printf("(%d): No such process\n", id);
+            return;
+        }
     } else {
         // wrong format
         printf("%s: argument must be a PID or %%jobid\n", argv[0]);
@@ -324,10 +330,13 @@ void do_bgfg(char **argv) {
     }
     if (!strcmp(argv[0], "bg")) {
         job->state = BG;
-        kill(job->pid, SIGCONT);
+        // send SIGCONT to process group
+        kill(-(job->pid), SIGCONT);
         printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
     } else {
-
+        job->state = FG;
+        kill(-(job->pid), SIGCONT);
+        waitfg(job->pid);
     }
 }
 
