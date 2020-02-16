@@ -345,7 +345,7 @@ void sigchld_handler(int sig) {
         if (WIFEXITED(status)) { // exited normally
             deletejob(jobs, pid);
         } else if (WIFSIGNALED(status)) { // terminated by signal
-            printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WSTOPSIG(status));
+            printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
             deletejob(jobs, pid);
         } else { // stopped
             struct job_t *job = getjobpid(jobs, pid);
@@ -365,7 +365,10 @@ void sigchld_handler(int sig) {
  *    to the foreground job.  
  */
 void sigint_handler(int sig) {
-    return;
+    int old_errno = errno;
+    pid_t pid = fgpid(jobs);
+    if (pid != 0) kill(pid, SIGINT);
+    errno = old_errno;
 }
 
 /*
