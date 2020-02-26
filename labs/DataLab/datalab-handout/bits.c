@@ -157,6 +157,7 @@ NOTES:
 int bitXor(int x, int y) {
     return ~((~(x & ~y)) & (~(~x & y)));
 }
+
 /*
  * tmin - return minimum two's complement integer
  *   Legal ops: ! ~ & ^ | + << >>
@@ -180,6 +181,7 @@ int isTmax(int x) {
     // requires t == 0 but s == 1:
     return (!t) & !!s;
 }
+
 /*
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
  *   where bits are numbered from 0 (least significant) to 31 (most significant)
@@ -189,10 +191,11 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-    int a    = 0xAA;
+    int a = 0xAA;
     int mask = (a) | (a << 8) | (a << 16) | (a << 24);
     return !((x & mask) ^ mask);
 }
+
 /*
  * negate - return -x
  *   Example: negate(1) = -1.
@@ -219,6 +222,7 @@ int isAsciiDigit(int x) {
     int c = !((x >> 3) ^ 0x6);
     return a | b | c;
 }
+
 /*
  * conditional - same as x ? y : z
  *   Example: conditional(2,4,5) = 4
@@ -233,6 +237,7 @@ int conditional(int x, int y, int z) {
     int s = ~t;
     return (y & t) | (z & s);
 }
+
 /*
  * isLessOrEqual - if x <= y  then re
  * turn 1, else return 0
@@ -244,8 +249,8 @@ int conditional(int x, int y, int z) {
 int isLessOrEqual(int x, int y) {
     int x_is_p = !(x >> 31);
     int y_is_p = !(y >> 31);
-    int sig_1  = !x_is_p & y_is_p; // x < 0 while y >= 0
-    int sig_0  = x_is_p & !y_is_p; // x >= 0 while y < 0
+    int sig_1 = !x_is_p & y_is_p; // x < 0 while y >= 0
+    int sig_0 = x_is_p & !y_is_p; // x >= 0 while y < 0
     // assume sgn(x) == sgn(y), check the sign of y - x
     int dif_is_p = !((y + ~x + 1) >> 31);
 
@@ -264,6 +269,7 @@ int logicalNeg(int x) {
     // sgn(x) != sgn(-x), except x == 0 [0] or x == Tmin [1]
     return ((x | (~x + 1)) >> 31) + 1;
 }
+
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
  *  Examples: howManyBits(12) = 5
@@ -282,7 +288,7 @@ int howManyBits(int x) {
     // conditional: if x < 0, let x = ~x
     //  x: 11..1[0?..?](k) need k+1 bits: 1[0?..?]
     // ~x: 00..0[1?..?](k) need k+1 bits: 0[1?..?]
-    x   = (sgn & ~x) | (~sgn & x);
+    x = (sgn & ~x) | (~sgn & x);
     b16 = !!(x >> 16) << 4; // whether there's 1 in highest 16 bits
     x >>= b16;
     b8 = !!(x >> 8) << 3;
@@ -309,8 +315,16 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-    return 2;
+    unsigned frc = (uf & 0x007fffff);
+    unsigned exp = (uf & 0x7f800000) >> 23;
+    unsigned sgn = (uf & 0x80000000);
+    if (exp == 0xff) return uf;                 // infinite or NaN
+    if (exp == 0x00) return (frc << 1) | sgn;   // denormalized
+    ++exp;
+    if (exp == 0xff) return 0x7f800000 | sgn;
+    return sgn | (exp << 23) | frc;
 }
+
 /*
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
  *   for floating point argument f.
@@ -324,8 +338,20 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-    return 2;
+    unsigned frc = (uf & 0x007fffff) | 0x00800000;  // 1.f
+    int exp = ((uf & 0x7f800000) >> 23) - 127;
+    unsigned sgn = uf >> 31;
+    if (uf == 0) return 0;
+    if (exp < 0) return 0;
+    if (exp > 31) return 0x80000000;
+    if (exp <= 23) frc >>= (23 - exp);              // convert frc part to int
+    else frc <<= (exp - 23);
+
+    if ((frc >> 31) == sgn) return frc;             // correct sign
+    else if (frc >> 31) return 0x80000000;          // sgn = 0, frc is neg? overflow
+    else return ~frc + 1;                           // real neg
 }
+
 /*
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
  *   (2.0 raised to the power x) for any 32-bit integer x.
@@ -340,5 +366,8 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    if (x < -127 - 23) return 0;                    // 0
+    if (x > 128) return 0x7f800000;                 // +INF
+    if (x <= -127) return 1 << ((x - (-127 - 23))); // denormalized
+    return (x + 127) << 23;                         // normalized
 }
