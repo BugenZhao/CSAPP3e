@@ -22,5 +22,5 @@
 ✔️ Cache Lab  
 ➖ Performance Lab  
 ✔️ Shell Lab  
-➖ Malloc Lab  
+✔️ Malloc Lab  
 ➖ Proxy Lab  
