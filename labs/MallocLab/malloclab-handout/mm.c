@@ -1,10 +1,8 @@
 /*
- * mm-naive.c - The fastest, least memory-efficient malloc package.
- * 
- * In this naive approach, a block is allocated by simply incrementing
- * the brk pointer.  A block is pure payload. There are no headers or
- * footers.  Blocks are never coalesced or reused. Realloc is
- * implemented directly using mm_malloc and mm_free.
+ * <Implicit Free Lists> implementation with best-fit strategy and
+ *  reallocation optimization.
+ *
+ * Created by Bugen Zhao on 2020/2/27.
  *
  * NOTE TO STUDENTS: Replace this header comment with your own header
  * comment that gives a high level description of your solution.
@@ -79,9 +77,9 @@ static void *find_fit(size_t asize);
 
 static void place(void *bp, size_t asize);
 
-static inline void *realloc_coalesce(void *bp, size_t req_size);
-
-static inline void realloc_place(void *bp, size_t asize, size_t csize);
+//static inline void *realloc_coalesce(void *bp, size_t req_size);
+//
+//static inline void realloc_place(void *bp, size_t asize, size_t csize);
 
 /* 
  * mm_init - initialize the malloc package.
@@ -147,8 +145,8 @@ void *mm_realloc(void *ptr, size_t size) {
     void *old_ptr = ptr;
     void *new_ptr;
     size_t old_size;
-    size_t csize;
-    size_t asize;
+    size_t next_alloc;
+    size_t next_size;
 
     if (size == 0) {
         mm_free(ptr);
@@ -158,32 +156,49 @@ void *mm_realloc(void *ptr, size_t size) {
         return mm_malloc(size);
     }
 
+    if (size <= DSIZE) size = 2 * DSIZE;
+    else size = ALIGN(size);  // align it
+
     old_size = GET_SIZE(HDRP(ptr));
+    next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(ptr)));
+    next_size = GET_SIZE(HDRP(NEXT_BLKP(ptr)));
 
-    if (size <= DSIZE) asize = 2 * DSIZE;
-    else asize = ALIGN(size);  // ceil
-    csize = old_size;
-
-    if (asize <= csize) {
-        realloc_place(old_ptr, asize, csize);
+    if (size <= old_size) {
+        // size is less than the older, return directly
         return old_ptr;
+    } else if (next_size == 0) {
+        // already reach epilogue, extend in-place
+        if (extend_heap((size - old_size) / WSIZE) == NULL)
+            return NULL;
+        PUT(HDRP(ptr), PACK(size, ALLOC));
+        PUT(FTRP(ptr), PACK(size, ALLOC));
+
+        assert(GET_SIZE(HDRP(NEXT_BLKP(ptr))) == 0);
+
+        return old_ptr;
+    } else if (next_alloc == FREE) {
+        // the next block is empty
+        coalesce(NEXT_BLKP(ptr));
+        size_t whole_size = old_size + next_size;
+        assert(whole_size % DSIZE == 0);
+        if (whole_size == size) {
+            PUT(HDRP(ptr), PACK(size, ALLOC));
+            PUT(FTRP(ptr), PACK(size, ALLOC));
+
+            return old_ptr;
+        } else if (whole_size > size) {
+            PUT(HDRP(ptr), PACK(size, ALLOC));
+            PUT(FTRP(ptr), PACK(size, ALLOC));
+            ptr = NEXT_BLKP(ptr);
+            PUT(HDRP(ptr), PACK(old_size + next_size - size, FREE));
+            PUT(FTRP(ptr), PACK(old_size + next_size - size, FREE));
+
+            // the statement below can improve util significantly (迷いですね...)
+            prev_fitp = heap_listp;
+
+            return old_ptr;
+        }
     }
-
-//    size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(ptr)));
-//    size_t next_size = GET_SIZE(HDRP(NEXT_BLKP(ptr)));
-//    if (next_size == 0u) {
-//        mm_malloc(asize - old_size - DSIZE);
-//        PUT(HDRP(old_ptr), PACK(asize, ALLOC));
-//        PUT(FTRP(old_ptr), PACK(asize, ALLOC));
-//        return old_ptr;
-//    }
-//    if (!next_alloc) {
-//        if (next_size + old_size - DSIZE >= asize) {
-//            realloc_place(old_ptr, asize, next_size + old_size);
-//            return old_ptr;
-//        }
-//    }
-
 
     new_ptr = mm_malloc(size);
     if (new_ptr == NULL)
@@ -237,6 +252,13 @@ void *coalesce(void *bp) {
 
 void *find_fit(size_t asize) {
     void *bp;
+#ifdef FIRST_FIT
+    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+        if (GET_ALLOC(HDRP(bp)) == FREE && GET_SIZE(HDRP(bp)) >= asize) {
+            return bp;
+        }
+    }
+#else
     if (prev_fitp == NULL) prev_fitp = heap_listp;
     for (bp = prev_fitp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
         if (GET_ALLOC(HDRP(bp)) == FREE && GET_SIZE(HDRP(bp)) >= asize) {
@@ -251,6 +273,7 @@ void *find_fit(size_t asize) {
         }
     }
     return NULL;
+#endif
 }
 
 void place(void *bp, size_t asize) {
@@ -265,41 +288,4 @@ void place(void *bp, size_t asize) {
         PUT(HDRP(bp), PACK(csize, ALLOC));
         PUT(FTRP(bp), PACK(csize, ALLOC));
     }
-}
-
-void realloc_place(void *bp, size_t asize, size_t csize) {
-    if (csize - asize >= 2 * DSIZE) {
-        PUT(HDRP(bp), PACK(asize, ALLOC));
-        PUT(FTRP(bp), PACK(asize, ALLOC));
-        bp = NEXT_BLKP(bp);
-        PUT(HDRP(bp), PACK(csize - asize, FREE));
-        PUT(FTRP(bp), PACK(csize - asize, FREE));
-        coalesce(bp);
-    }
-}
-
-void *realloc_coalesce(void *bp, size_t req_size) {
-    size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp)));
-    size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
-    size_t size = GET_SIZE(HDRP(bp));
-
-    if (prev_alloc && next_alloc) {                         // a, f, a
-        return bp;
-    } else if (prev_alloc && !next_alloc) {                 // a, f, f
-        size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
-        PUT(HDRP(bp), PACK(size, FREE));
-        PUT(FTRP(bp), PACK(size, FREE));
-    } else if (!prev_alloc && next_alloc) {                 // f, f, a
-        size += GET_SIZE(FTRP(PREV_BLKP(bp)));
-        PUT(HDRP(PREV_BLKP(bp)), PACK(size, FREE));
-        PUT(FTRP(bp), PACK(size, FREE));
-        bp = PREV_BLKP(bp);
-    } else {                                                // f, f, f
-        size += GET_SIZE(HDRP(NEXT_BLKP(bp))) + GET_SIZE(FTRP(PREV_BLKP(bp)));
-        PUT(HDRP(PREV_BLKP(bp)), PACK(size, FREE));
-        PUT(FTRP(NEXT_BLKP(bp)), PACK(size, FREE));
-        bp = PREV_BLKP(bp);
-    }
-    prev_fitp = bp;
-    return bp;
 }
