@@ -10,7 +10,7 @@
 ✔️ 07: Linking  
 ✔️ 08: Exceptional Control Flow  
 ✔️ 09: Virtual Memory  
-➖ 10: System-Level I/O  
+✔️ 10: System-Level I/O  
 ➖ 11: Network Programming  
 ➖ 12: Concurrent Programming  
 

@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 3.10)
 project(CSAPP)
 
+set(CMAKE_VERBOSE_MAKEFILE 1)
+
 enable_language(C ASM)
 set(CMAKE_ASM_COMPILER as)
 set(CMAKE_C_COMPILER gcc-9)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g")
 set(CMAKE_INCLUDE_CURRENT_DIR "YES")
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_executable(02058 chapter02/assignment/02058.c)
 add_executable(02059 chapter02/assignment/02059.c)
