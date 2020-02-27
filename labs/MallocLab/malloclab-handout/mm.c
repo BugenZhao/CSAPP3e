@@ -1,5 +1,5 @@
 /*
- * <Implicit Free Lists> implementation with best-fit strategy and
+ * <Implicit Free Lists> implementation with next-fit strategy and
  *  reallocation optimization.
  *
  * Created by Bugen Zhao on 2020/2/27.
