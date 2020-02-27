@@ -1,1 +1,1 @@
-add_executable(mm mm.c)
+add_executable(malloc_lab mdriver.c mm.c memlib.c fsecs.c fcyc.c clock.c ftimer.c)
