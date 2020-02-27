@@ -1,4 +1,4 @@
-A simple **Implicit Free Lists** implementation with best-fit strategy and reallocation optimization.
+A simple **Implicit Free Lists** implementation with next-fit strategy and reallocation optimization.
 
 TODO: **Segregated Fits** implementation.
 
