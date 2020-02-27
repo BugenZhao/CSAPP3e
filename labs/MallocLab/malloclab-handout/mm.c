@@ -45,6 +45,7 @@ team_t team = {
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
 #define MAX(a, b)   ((a) > (b) ? (a) : (b))
+#define MIN(a, b)   ((a) < (b) ? (a) : (b))
 
 #define WSIZE       4u
 #define DSIZE       (WSIZE * 2)
@@ -68,6 +69,7 @@ team_t team = {
 #define PREV_BLKP(bp)   ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
 static char *heap_listp = NULL;
+static char *prev_fitp = NULL;
 
 static void *extend_heap(size_t words);
 
@@ -197,14 +199,24 @@ void *coalesce(void *bp) {
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, FREE));
         bp = PREV_BLKP(bp);
     }
-
+    prev_fitp = bp;
     return bp;
 }
 
 void *find_fit(size_t asize) {
     void *bp;
-    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
-        if (GET_ALLOC(HDRP(bp)) == FREE && GET_SIZE(HDRP(bp)) >= asize) return bp;
+    if (prev_fitp == NULL) prev_fitp = heap_listp;
+    for (bp = prev_fitp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+        if (GET_ALLOC(HDRP(bp)) == FREE && GET_SIZE(HDRP(bp)) >= asize) {
+            prev_fitp = bp;
+            return bp;
+        }
+    }
+    for (bp = heap_listp; bp != prev_fitp; bp = NEXT_BLKP(bp)) {
+        if (GET_ALLOC(HDRP(bp)) == FREE && GET_SIZE(HDRP(bp)) >= asize) {
+            prev_fitp = bp;
+            return bp;
+        }
     }
     return NULL;
 }
