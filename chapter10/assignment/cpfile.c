@@ -12,6 +12,9 @@ int main(int argc, char **argv) {
 
     if (argc >= 2)
         fd = Open(argv[1], O_RDONLY, 0);
+    else
+        exit(1);
+
     Rio_readinitb(&rio, fd);
     while ((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0)
         Rio_writen(STDOUT_FILENO, buf, n);
