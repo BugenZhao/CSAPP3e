@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(CSAPP)
+project(BugenCSAPP3e)
 
 set(CMAKE_VERBOSE_MAKEFILE 1)
 
@@ -9,7 +9,17 @@ set(CMAKE_C_COMPILER gcc-9)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g")
 set(CMAKE_INCLUDE_CURRENT_DIR "YES")
-include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${CMAKE_SOURCE_DIR}/csapp/include)
+
+#find_library(LIBCSAPP csappmacos64 ${CMAKE_SOURCE_DIR}/csapp/lib)
+#link_libraries(${LIBCSAPP})
+
+add_subdirectory(csapp)
+link_libraries(libcsapp64)
+
+add_subdirectory(labs/CacheLab/cachelab-handout)
+add_subdirectory(labs/ShellLab/shlab-handout)
+add_subdirectory(labs/MallocLab/malloclab-handout)
 
 add_executable(02058 chapter02/assignment/02058.c)
 add_executable(02059 chapter02/assignment/02059.c)
@@ -25,11 +35,10 @@ add_executable(add_testing chapter03/experiment/add_testing.c chapter03/experime
 add_executable(rfact_testing chapter03/experiment/rfact_testing.c chapter03/experiment/rfact.s)
 add_executable(bomb labs/BombLab/bomb/bomb.c)
 add_executable(bubble chapter04/assignment/04047/bubble.c)
-add_subdirectory(labs/CacheLab/cachelab-handout)
 add_executable(mysystem chapter08/assignment/08022/mysystem.c)
 add_executable(waitpid chapter08/assignment/08024/waitpid.c)
 add_executable(tfgets chapter08/assignment/08025/tfgets.c)
-add_subdirectory(labs/ShellLab/shlab-handout)
 add_executable(mmapcopy chapter09/assignment/09005/mmapcopy.c)
 add_executable(mmaphello chapter09/assignment/09014/mmaphello.c)
-add_subdirectory(labs/MallocLab/malloclab-handout)
+add_executable(cpfile chapter10/assignment/cpfile.c)
+add_executable(hostinfo chapter11/experiment/hostinfo.c)
