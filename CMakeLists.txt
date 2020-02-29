@@ -42,3 +42,5 @@ add_executable(mmapcopy chapter09/assignment/09005/mmapcopy.c)
 add_executable(mmaphello chapter09/assignment/09014/mmaphello.c)
 add_executable(cpfile chapter10/assignment/cpfile.c)
 add_executable(hostinfo chapter11/experiment/hostinfo.c)
+
+add_subdirectory(chapter11/btiny)

@@ -1,0 +1,1 @@
+add_executable(btiny btiny.c)
