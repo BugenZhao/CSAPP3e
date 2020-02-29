@@ -29,6 +29,8 @@ void process(int connfd);
 
 void skip_req_headers(rio_t *rp);
 
+size_t read_req_headers(rio_t *rp);
+
 int parse_uri(string uri, string filename, string cgiargs);
 
 void serve_static(int connfd, string filename);
@@ -81,6 +83,7 @@ void process(int connfd) {
     string filename, cgiargs;
     rio_t rio;
     int is_static;
+    size_t length;
 
     Rio_readinitb(&rio, connfd);
     // get HTTP header / request line
@@ -94,6 +97,16 @@ void process(int connfd) {
         is_static = parse_uri(uri, filename, cgiargs);
         if (is_static) serve_static(connfd, filename);
         else serve_dynamic(connfd, filename, cgiargs);
+    } else if (strcasecmp(method, "POST") == 0) {
+        length = read_req_headers(&rio);
+        // serve POST request;
+        is_static = parse_uri(uri, filename, cgiargs);
+        if (is_static) serve_static(connfd, filename);
+        else {
+            // read POST args
+            Rio_readnb(&rio, cgiargs, length);
+            serve_dynamic(connfd, filename, cgiargs);
+        }
     } else {
         client_error(connfd, method, "501", "Not Implemented", "Not Implemented");
     }
@@ -104,6 +117,20 @@ void skip_req_headers(rio_t *rp) {
     do {
         Rio_readlineb(rp, buf, MAXLINE);
     } while (strcmp(buf, "\r\n") != 0);
+}
+
+size_t read_req_headers(rio_t *rp) {
+    string buf;
+    size_t length = 0;
+
+    // get post content length from the header
+    do {
+        Rio_readlineb(rp, buf, MAXLINE);
+        if (strncasecmp(buf, "Content-length:", 15) == 0)
+            sscanf(buf + 15, "%lu", &length);
+    } while (strcmp(buf, "\r\n") != 0);
+
+    return length;
 }
 
 int parse_uri(string uri, string filename, string cgiargs) {

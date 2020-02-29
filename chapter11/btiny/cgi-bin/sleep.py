@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-import os
+import cgi
 import sys
 import time
 
+form = cgi.FieldStorage()
 content = '<em>BTiny Lazybones:</em> '
-query = os.getenv('QUERY_STRING')
 try:
-    t = int(query.split('&')[0])
+    t = int(form.getvalue('time'))
     time.sleep(t)
     content += '%d seconds' % t
 except:
