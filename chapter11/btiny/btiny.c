@@ -18,6 +18,13 @@ void bye(int sig) {
     exit(0);
 }
 
+void sigchld_handler(int sig) {
+    int old_errno = errno;
+    pid_t pid;
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0);
+    errno = old_errno;
+}
+
 void process(int connfd);
 
 void skip_req_headers(rio_t *rp);
@@ -40,8 +47,8 @@ int main(int argc, char **argv) {
     socklen_t clientlen;
     string open_cmd = "open http://localhost:";
 
-    if (signal(SIGINT, bye) == SIG_ERR)
-        unix_error("signal error");
+    Signal(SIGINT, bye);
+    Signal(SIGCHLD, sigchld_handler);
 
     if (argc >= 2)
         strncpy(port, argv[1], 5);
@@ -63,7 +70,7 @@ int main(int argc, char **argv) {
         Getnameinfo((SA *) &clientaddr, clientlen, host, MAXLINE, serv, MAXLINE, 0);
         printf("Accept connection from %s:%s\n", host, serv);
         process(connfd);
-        Close(connfd);
+        Close(connfd); // only the main process close the socket file
         printf("Close connection from %s:%s\n\n\n", host, serv);
     }
 }
@@ -133,6 +140,7 @@ void serve_static(int connfd, string filename) {
     string buf;
     int fd;
     char *filebuf;
+    off_t filesize;
 
     printf("Static content\n");
 
@@ -144,22 +152,26 @@ void serve_static(int connfd, string filename) {
         client_error(connfd, filename, "403", "Forbidden", "No permission to read");
         return;
     }
+    filesize = sbuf.st_size;
 
     get_filetype(filename, filetype);
     sprintf(buf, "HTTP/1.0 200 OK\r\n");
     sprintf(buf, "%sServer: %s\r\n", buf, server_name);
     sprintf(buf, "%sConnection: close\r\n", buf);
-    sprintf(buf, "%sContent-length: %llu\r\n", buf, sbuf.st_size);
+    sprintf(buf, "%sContent-length: %llu\r\n", buf, filesize);
     sprintf(buf, "%sContent-type: %s\r\n", buf, filetype);
     sprintf(buf, "%s\r\n", buf); // IMPORTANT!
     Rio_writen(connfd, buf, strlen(buf));
     printf("%s", buf);
 
     fd = Open(filename, O_RDONLY, 0);
-    filebuf = Mmap(NULL, sbuf.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    filebuf = Malloc(filesize);
+    Rio_readn(fd, filebuf, filesize);
+//    filebuf = Mmap(NULL, sbuf.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     Close(fd);
-    Rio_writen(connfd, filebuf, sbuf.st_size);
-    Munmap(filebuf, sbuf.st_size);
+    Rio_writen(connfd, filebuf, filesize);
+//    Munmap(filebuf, filesize);
+    Free(filebuf);
 }
 
 void serve_dynamic(int connfd, string filename, string cgiargs) {
@@ -190,7 +202,7 @@ void serve_dynamic(int connfd, string filename, string cgiargs) {
         Dup2(connfd, STDOUT_FILENO);
         Execve(filename, argv, environ);
     }
-    Wait(NULL);
+//    Wait(NULL);
 }
 
 void client_error(int connfd, string cause, string errnum, string msg, string disc) {
@@ -215,6 +227,7 @@ void client_error(int connfd, string cause, string errnum, string msg, string di
 }
 
 void get_filetype(string filename, string filetype) {
+    // get mime type by filename
     if (strstr(filename, ".htm"))
         strcpy(filetype, "text/html");
     else if (strstr(filename, ".gif"))
