@@ -8,8 +8,10 @@
 
 #define STATIC 1
 #define DYNAMIC 0
-
 typedef char string[MAXLINE];
+typedef unsigned long long ull;
+
+const char server_name[] = "BTiny Web Server";
 
 void bye(int sig) {
     printf("Bye\n");
@@ -47,7 +49,7 @@ int main(int argc, char **argv) {
         strcpy(port, "1018");
 
     listenfd = open_listenfd(port);
-    printf("BTiny is listening on port %s...\n", port);
+    printf("%s is listening on port %s...\n", server_name, port);
     fflush(stdout);
     strcat(open_cmd, port);
     system(open_cmd);
@@ -85,7 +87,7 @@ void process(int connfd) {
         if (is_static) serve_static(connfd, filename);
         else serve_dynamic(connfd, filename, cgiargs);
     } else {
-        client_error(connfd, method, "501", "Not implemented", "Sorry");
+        client_error(connfd, method, "501", "Not Implemented", "Not Implemented");
     }
 }
 
@@ -134,7 +136,7 @@ void serve_static(int connfd, string filename) {
     printf("Static content\n");
 
     if (stat(filename, &sbuf) < 0) {
-        client_error(connfd, filename, "404", "Not found", "Couldn't find");
+        client_error(connfd, filename, "404", "Not Found", "Not Found");
         return;
     }
     if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
@@ -144,9 +146,9 @@ void serve_static(int connfd, string filename) {
 
     get_filetype(filename, filetype);
     sprintf(buf, "HTTP/1.0 200 OK\r\n");
-    sprintf(buf, "%sServer: BTiny Web Server\r\n", buf);
+    sprintf(buf, "%sServer: %s\r\n", buf, server_name);
     sprintf(buf, "%sConnection: close\r\n", buf);
-    sprintf(buf, "%sContent-length: %lld\r\n", buf, sbuf.st_size);
+    sprintf(buf, "%sContent-length: %llu\r\n", buf, sbuf.st_size);
     sprintf(buf, "%sContent-type: %s\r\n", buf, filetype);
     sprintf(buf, "%s\r\n", buf); // IMPORTANT!
     Rio_writen(connfd, buf, strlen(buf));
@@ -164,11 +166,28 @@ void serve_dynamic(int connfd, string filename, string cgiargs) {
 }
 
 void client_error(int connfd, string cause, string errnum, string msg, string disc) {
+    string html, buf;
+    ull len;
+
     printf("Client error %s\n", errnum);
+
+    sprintf(html, "<h1>%s %s</h1><p>%s: %s</p><em>%s</em>", errnum, msg, cause, disc, server_name);
+    len = strlen(html);
+
+    sprintf(buf, "HTTP/1.0 %s %s\r\n", errnum, msg);
+    sprintf(buf, "%sServer: %s\r\n", buf, server_name);
+    sprintf(buf, "%sConnection: close\r\n", buf);
+    sprintf(buf, "%sContent-length: %llu\r\n", buf, len);
+    sprintf(buf, "%sContent-type: text/html\r\n", buf);
+    sprintf(buf, "%s\r\n", buf); // IMPORTANT!
+    Rio_writen(connfd, buf, strlen(buf));
+    printf("%s", buf);
+
+    Rio_writen(connfd, html, len);
 }
 
 void get_filetype(string filename, string filetype) {
-    if (strstr(filename, ".html"))
+    if (strstr(filename, ".htm"))
         strcpy(filetype, "text/html");
     else if (strstr(filename, ".gif"))
         strcpy(filetype, "image/gif");
