@@ -2,6 +2,8 @@
 // Created by Bugen Zhao on 2020/2/29.
 //
 
+// TODO: safer writes and clean PIPE errors handling
+
 #include "csapp.h"
 
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
