@@ -6,6 +6,9 @@
 
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
+#define STATIC 1
+#define DYNAMIC 0
+
 typedef char string[MAXLINE];
 
 void bye(int sig) {
@@ -24,6 +27,8 @@ void serve_static(int connfd, string filename);
 void serve_dynamic(int connfd, string filename, string cgiargs);
 
 void client_error(int connfd, string cause, string errnum, string msg, string disc);
+
+void get_filetype(string filename, string filetype);
 
 int main(int argc, char **argv) {
     int listenfd, connfd;
@@ -52,11 +57,11 @@ int main(int argc, char **argv) {
         connfd = Accept(listenfd, (SA *) &clientaddr, &clientlen);
         Getnameinfo((SA *) &clientaddr, clientlen, host, MAXLINE, serv, MAXLINE, 0);
         printf("Accept connection from %s:%s\n", host, serv);
-        fflush(stdout);
+//        fflush(stdout);
         process(connfd);
         Close(connfd);
-        printf("Close connection from %s:%s\n", host, serv);
-        fflush(stdout);
+        printf("Close connection from %s:%s\n\n\n", host, serv);
+//        fflush(stdout);
     }
 }
 
@@ -80,7 +85,7 @@ void process(int connfd) {
         if (is_static) serve_static(connfd, filename);
         else serve_dynamic(connfd, filename, cgiargs);
     } else {
-        client_error(connfd, method, "501", "Not Implemented", "Sorry");
+        client_error(connfd, method, "501", "Not implemented", "Sorry");
     }
 }
 
@@ -92,17 +97,85 @@ void skip_req_headers(rio_t *rp) {
 }
 
 int parse_uri(string uri, string filename, string cgiargs) {
-    return 1;
+    char *ptr;
+
+    if (strstr(uri, "cgi-bin") == NULL) {
+        // static
+        strcpy(cgiargs, "");
+        strcpy(filename, ".");
+        strcat(filename, uri);
+        // default page
+        if (filename[strlen(filename) - 1] == '/')
+            strcat(filename, "index.html");
+
+        return STATIC;
+    } else {
+        // dynamic
+        ptr = index(uri, '?');
+        if (ptr == NULL) strcpy(cgiargs, "");
+        else {
+            strcpy(cgiargs, ptr + 1);
+            *ptr = '\0';
+        }
+        strcpy(filename, ".");
+        strcat(filename, uri);
+
+        return DYNAMIC;
+    }
 }
 
 void serve_static(int connfd, string filename) {
+    struct stat sbuf;
+    string filetype;
+    string buf;
+    int fd;
+    char *filebuf;
 
+    printf("Static content\n");
+
+    if (stat(filename, &sbuf) < 0) {
+        client_error(connfd, filename, "404", "Not found", "Couldn't find");
+        return;
+    }
+    if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
+        client_error(connfd, filename, "403", "Forbidden", "No permission");
+        return;
+    }
+
+    get_filetype(filename, filetype);
+    sprintf(buf, "HTTP/1.0 200 OK\r\n");
+    sprintf(buf, "%sServer: BTiny Web Server\r\n", buf);
+    sprintf(buf, "%sConnection: close\r\n", buf);
+    sprintf(buf, "%sContent-length: %lld\r\n", buf, sbuf.st_size);
+    sprintf(buf, "%sContent-type: %s\r\n", buf, filetype);
+    sprintf(buf, "%s\r\n", buf); // IMPORTANT!
+    Rio_writen(connfd, buf, strlen(buf));
+    printf("%s", buf);
+
+    fd = Open(filename, O_RDONLY, 0);
+    filebuf = Mmap(NULL, sbuf.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    Close(fd);
+    Rio_writen(connfd, filebuf, sbuf.st_size);
+    Munmap(filebuf, sbuf.st_size);
 }
 
 void serve_dynamic(int connfd, string filename, string cgiargs) {
-
+    printf("Dynamic content\n");
 }
 
 void client_error(int connfd, string cause, string errnum, string msg, string disc) {
+    printf("Client error %s\n", errnum);
+}
 
+void get_filetype(string filename, string filetype) {
+    if (strstr(filename, ".html"))
+        strcpy(filetype, "text/html");
+    else if (strstr(filename, ".gif"))
+        strcpy(filetype, "image/gif");
+    else if (strstr(filename, ".png"))
+        strcpy(filetype, "image/png");
+    else if (strstr(filename, ".jpg"))
+        strcpy(filetype, "image/jpeg");
+    else
+        strcpy(filetype, "text/plain");
 }
