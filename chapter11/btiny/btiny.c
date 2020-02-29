@@ -52,18 +52,19 @@ int main(int argc, char **argv) {
     printf("%s is listening on port %s...\n", server_name, port);
     fflush(stdout);
     strcat(open_cmd, port);
+
+#ifdef __APPLE__
     system(open_cmd);
+#endif
 
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *) &clientaddr, &clientlen);
         Getnameinfo((SA *) &clientaddr, clientlen, host, MAXLINE, serv, MAXLINE, 0);
         printf("Accept connection from %s:%s\n", host, serv);
-//        fflush(stdout);
         process(connfd);
         Close(connfd);
         printf("Close connection from %s:%s\n\n\n", host, serv);
-//        fflush(stdout);
     }
 }
 
@@ -140,7 +141,7 @@ void serve_static(int connfd, string filename) {
         return;
     }
     if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
-        client_error(connfd, filename, "403", "Forbidden", "No permission");
+        client_error(connfd, filename, "403", "Forbidden", "No permission to read");
         return;
     }
 
@@ -162,7 +163,34 @@ void serve_static(int connfd, string filename) {
 }
 
 void serve_dynamic(int connfd, string filename, string cgiargs) {
+    struct stat sbuf;
+    string filetype;
+    string buf;
+    char **argv = {NULL};
+
     printf("Dynamic content\n");
+
+    if (stat(filename, &sbuf) < 0) {
+        client_error(connfd, filename, "404", "Not Found", "Not Found");
+        return;
+    }
+    if (!(S_ISREG(sbuf.st_mode)) || !(S_IXUSR & sbuf.st_mode)) {
+        client_error(connfd, filename, "403", "Forbidden", "No permission to execute");
+        return;
+    }
+
+    get_filetype(filename, filetype);
+    sprintf(buf, "HTTP/1.0 200 OK\r\n");
+    sprintf(buf, "%sServer: %s\r\n", buf, server_name);
+    Rio_writen(connfd, buf, strlen(buf));
+    printf("%s", buf);
+
+    if (Fork() == 0) {
+        setenv("QUERY_STRING", cgiargs, 1);
+        Dup2(connfd, STDOUT_FILENO);
+        Execve(filename, argv, environ);
+    }
+    Wait(NULL);
 }
 
 void client_error(int connfd, string cause, string errnum, string msg, string disc) {
@@ -171,7 +199,7 @@ void client_error(int connfd, string cause, string errnum, string msg, string di
 
     printf("Client error %s\n", errnum);
 
-    sprintf(html, "<h1>%s %s</h1><p>%s: %s</p><em>%s</em>", errnum, msg, cause, disc, server_name);
+    sprintf(html, "<h1>%s %s</h1><p>%s: %s</p><em>%s</em>", errnum, msg, disc, cause, server_name);
     len = strlen(html);
 
     sprintf(buf, "HTTP/1.0 %s %s\r\n", errnum, msg);
