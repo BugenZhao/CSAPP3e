@@ -8,10 +8,14 @@
 
 #define STATIC 1
 #define DYNAMIC 0
+#define GET 0
+#define POST 1
+#define HEAD 2
 typedef char string[MAXLINE];
 typedef unsigned long long ull;
 
 const char server_name[] = "BTiny Web Server";
+const char *methods[] = {"GET", "POST", "HEAD"};
 
 void bye(int sig) {
     printf("Bye\n");
@@ -33,9 +37,9 @@ size_t read_req_headers(rio_t *rp);
 
 int parse_uri(string uri, string filename, string cgiargs);
 
-void serve_static(int connfd, string filename);
+void serve_static(int connfd, string filename, int method);
 
-void serve_dynamic(int connfd, string filename, string cgiargs);
+void serve_dynamic(int connfd, string filename, string cgiargs, int method);
 
 void client_error(int connfd, string cause, string errnum, string msg, string disc);
 
@@ -95,18 +99,24 @@ void process(int connfd) {
         skip_req_headers(&rio);
         // serve GET request
         is_static = parse_uri(uri, filename, cgiargs);
-        if (is_static) serve_static(connfd, filename);
-        else serve_dynamic(connfd, filename, cgiargs);
+        if (is_static) serve_static(connfd, filename, GET);
+        else serve_dynamic(connfd, filename, cgiargs, GET);
     } else if (strcasecmp(method, "POST") == 0) {
         length = read_req_headers(&rio);
         // serve POST request;
         is_static = parse_uri(uri, filename, cgiargs);
-        if (is_static) serve_static(connfd, filename);
+        if (is_static) serve_static(connfd, filename, POST);
         else {
             // read POST args
             Rio_readnb(&rio, cgiargs, length);
-            serve_dynamic(connfd, filename, cgiargs);
+            serve_dynamic(connfd, filename, cgiargs, POST);
         }
+    } else if (strcasecmp(method, "HEAD") == 0) {
+        skip_req_headers(&rio);
+        // serve HEAD request
+        is_static = parse_uri(uri, filename, cgiargs);
+        if (is_static) serve_static(connfd, filename, HEAD);
+        else serve_dynamic(connfd, filename, cgiargs, HEAD);
     } else {
         client_error(connfd, method, "501", "Not Implemented", "Not Implemented");
     }
@@ -161,7 +171,7 @@ int parse_uri(string uri, string filename, string cgiargs) {
     }
 }
 
-void serve_static(int connfd, string filename) {
+void serve_static(int connfd, string filename, int method) {
     struct stat sbuf;
     string filetype;
     string buf;
@@ -191,6 +201,8 @@ void serve_static(int connfd, string filename) {
     Rio_writen(connfd, buf, strlen(buf));
     printf("%s", buf);
 
+    if (method == HEAD) return;
+
     fd = Open(filename, O_RDONLY, 0);
     filebuf = Malloc(filesize);
     Rio_readn(fd, filebuf, filesize);
@@ -201,7 +213,7 @@ void serve_static(int connfd, string filename) {
     Free(filebuf);
 }
 
-void serve_dynamic(int connfd, string filename, string cgiargs) {
+void serve_dynamic(int connfd, string filename, string cgiargs, int method) {
     struct stat sbuf;
     string filetype;
     string buf;
@@ -226,6 +238,9 @@ void serve_dynamic(int connfd, string filename, string cgiargs) {
 
     if (Fork() == 0) {
         setenv("QUERY_STRING", cgiargs, 1);
+        // TODO: fix: no response after setting request_method
+//        setenv("REQUEST_METHOD", methods[method], 1);
+//        printf("I'M HERE!!!!!!!!!!\n");
         Dup2(connfd, STDOUT_FILENO);
         Execve(filename, argv, environ);
     }
