@@ -48,3 +48,4 @@ add_executable(hostinfo chapter11/experiment/hostinfo.c)
 
 add_subdirectory(chapter11/btiny)
 add_subdirectory(chapter12/readers-writers)
+add_executable(select_echo_line chapter12/assignment/12022/select_echo_line.c)
