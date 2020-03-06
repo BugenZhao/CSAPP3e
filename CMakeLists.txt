@@ -9,13 +9,16 @@ set(CMAKE_C_COMPILER gcc-9)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Og -g")
 set(CMAKE_INCLUDE_CURRENT_DIR "YES")
-include_directories(${CMAKE_SOURCE_DIR}/csapp/include)
+include_directories(${CMAKE_SOURCE_DIR}/csapp/include ${CMAKE_SOURCE_DIR}/bzcsapp)
 
 #find_library(LIBCSAPP csappmacos64 ${CMAKE_SOURCE_DIR}/csapp/lib)
 #link_libraries(${LIBCSAPP})
 
 add_subdirectory(csapp)
 link_libraries(libcsapp64)
+
+add_subdirectory(bzcsapp)
+link_libraries(libbzcsapp)
 
 add_subdirectory(labs/CacheLab/cachelab-handout)
 add_subdirectory(labs/ShellLab/shlab-handout)
@@ -44,3 +47,6 @@ add_executable(cpfile chapter10/assignment/cpfile.c)
 add_executable(hostinfo chapter11/experiment/hostinfo.c)
 
 add_subdirectory(chapter11/btiny)
+
+add_executable(rw1 chapter12/readers-writers/rw1.c chapter12/readers-writers/main.c)
+add_executable(sem_test chapter12/readers-writers/sem_test.c)
