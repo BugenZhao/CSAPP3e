@@ -4,10 +4,11 @@
 
 #include "rw.h"
 
-const char desc[80] = "RW1 - Weak priority to readers";
+const char desc[80] = "RW1 - Strong priority to readers";
 
 int readcnt;
-sem_t *mutex, *w;
+int protected;
+sem_t *mutex, *w, *wg;
 
 int writetimes;
 int readtimes;
@@ -29,13 +30,16 @@ void reader() {
 
         P(mutex);
         readcnt--;
-        if (readcnt == 0) V(w);
-        V(mutex);
+        if (readcnt == 0) {
+            V(mutex);
+            V(w);
+        } else V(mutex);
     }
 }
 
 void writer() {
     while (1) {
+        P(wg);
         P(w);
 
         // Writing...
@@ -47,26 +51,19 @@ void writer() {
         }
 
         V(w);
+        V(wg);
     }
 }
 
 void init() {
-#ifndef BUGENCSAPP3E_BZCSAPP_H
-    // mode 0600 is critical!!
-    mutex = sem_open("/bz_mutex_", O_CREAT | O_EXCL, 0600, 1);
-    w = sem_open("/bz_w_", O_CREAT | O_EXCL, 0600, 1);
-
-    // IMMEDIATELY unlink the semaphores to make sure they will be closed (sem_close) correctly
-    //  after program exits.
-    sem_unlink("/bz_mutex_");
-    sem_unlink("/bz_w_");
-#else
     mutex = Sem_open_and_unlink("/bz_mutex_", 1);
     w = Sem_open_and_unlink("/bz_w_", 1);
-#endif
+    wg = Sem_open_and_unlink("/bz_wg_", 1);
+
     readtimes = 0;
     writetimes = 0;
     readcnt = 0;
+    protected = 0;
 }
 
 #pragma clang diagnostic pop

@@ -4,10 +4,10 @@
 
 #include "rw.h"
 
-const char desc[80] = "RW1 - Weak priority to readers";
+const char desc[80] = "RW2 - Priority to writers";
 
-int readcnt;
-sem_t *mutex, *w;
+int writecnt;
+sem_t *mutex, *w, *wmutex;
 
 int writetimes;
 int readtimes;
@@ -19,32 +19,35 @@ void reader() {
     int i = 10000;
 
     while (i--) {
+        if (writecnt > 0) continue;
+
         P(mutex);
-        readcnt++;
         readtimes++;
-        if (readcnt == 1) P(w);
         V(mutex);
 
         // Reading...
 
-        P(mutex);
-        readcnt--;
-        if (readcnt == 0) V(w);
-        V(mutex);
     }
 }
 
 void writer() {
     while (1) {
+        P(wmutex);
+        writecnt++;
+        V(wmutex);
+
         P(w);
 
         // Writing...
+
         writetimes++;
         if (writetimes % 100 == 0) {
             printf("read/write: %d/%d\n", readtimes, writetimes);
             if (writetimes >= 1000)
                 exit(0);
         }
+
+        writecnt--;
 
         V(w);
     }
@@ -63,10 +66,11 @@ void init() {
 #else
     mutex = Sem_open_and_unlink("/bz_mutex_", 1);
     w = Sem_open_and_unlink("/bz_w_", 1);
+    wmutex = Sem_open_and_unlink("bz_mutex_", 1);
 #endif
     readtimes = 0;
     writetimes = 0;
-    readcnt = 0;
+    writecnt = 0;
 }
 
 #pragma clang diagnostic pop

@@ -10,9 +10,13 @@ int main() {
 
     init();
 
-    for (i = 0; i < 4; i++)
-        Pthread_create(&tid, NULL, (void *(*)(void *)) reader, NULL);
-    Pthread_create(&tid, NULL, (void *(*)(void *)) writer, NULL);
+    for (i = 0; i < 5; i++) {
+        if (i % 5 == 0)
+            Pthread_create(&tid, NULL, (void *(*)(void *)) writer, NULL);
+        else
+            Pthread_create(&tid, NULL, (void *(*)(void *)) reader, NULL);
+    }
+
 
     printf("%s\n", desc);
     Pthread_exit(NULL);

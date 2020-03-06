@@ -47,6 +47,4 @@ add_executable(cpfile chapter10/assignment/cpfile.c)
 add_executable(hostinfo chapter11/experiment/hostinfo.c)
 
 add_subdirectory(chapter11/btiny)
-
-add_executable(rw1 chapter12/readers-writers/rw1.c chapter12/readers-writers/main.c)
-add_executable(sem_test chapter12/readers-writers/sem_test.c)
+add_subdirectory(chapter12/readers-writers)
