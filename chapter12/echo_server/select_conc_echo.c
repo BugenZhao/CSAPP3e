@@ -4,7 +4,7 @@
 
 #include "csapp.h"
 
-int echo_line(int connfd);
+int echo(int connfd);
 
 void command(void);
 
@@ -53,8 +53,8 @@ int main(int argc, char **argv) {
         // Serve clients which are already existed and ready to read
         for (fd = listenfd + 1; fd <= max_fd; fd++) {
             if (FD_ISSET(fd, &ready_set)) { //! Ready Set
-                read_cnt = echo_line(fd);
-                if (read_cnt <= 0) {
+                read_cnt = echo(fd);
+                if (read_cnt < 0) {
                     printf("Get return value: %d, close connection %d...\n", read_cnt, fd);
                     Close(fd);
                     FD_CLR(fd, &read_set);
@@ -74,16 +74,30 @@ void command(void) {
     printf("%s", buf); /* Process the input command */
 }
 
-int echo_line(int connfd) {
+int echo(int connfd) {
     size_t n;
-    char buf[MAXLINE];
-    rio_t rio;
+    char buf;
+//    static rio_t rio;
+    static size_t cnt[FD_SETSIZE];
 
-    Rio_readinitb(&rio, connfd);
-    if ((n = Rio_readlineb(&rio, buf, MAXLINE)) > 0) {
-        printf("Server received %d bytes from connection %d: %s", (int) n, connfd, buf);
-        Rio_writen(connfd, buf, n);
-        return n;
+    n = Rio_readn(connfd, &buf, 1);
+    if (n == 1) {
+        cnt[connfd]++;
+        Rio_writen(connfd, &buf, 1);
+        if (buf == '\n') {
+            printf("Server received %zd bytes (ending up with '\\n') from connection %d\n", cnt[connfd], connfd);
+            cnt[connfd] = 0;
+            return 1;
+        } else if (buf == EOF) {
+            printf("Server received %zd bytes (ending up with EOF) from connection %d\n", cnt[connfd], connfd);
+            cnt[connfd] = 0;
+            return 1;
+        } else {
+            return 0;
+        }
+    } else if (n <= 0) {
+        printf("Server received %zd bytes from connection %d\n", cnt[connfd], connfd);
+        cnt[connfd] = 0;
+        return -1;
     }
-    return -1;
 }
