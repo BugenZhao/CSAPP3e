@@ -29,6 +29,7 @@ typedef unsigned long long ull;
 const char server_name[] = "BTiny-m Web Server";
 const char *methods[] = {"GET", "POST", "HEAD"};
 
+int dbg_mode = 0;
 sbuf_t sbuf;
 
 extern void Rio_writenp(int fd, void *usrbuf, size_t n);
@@ -82,6 +83,11 @@ int main(int argc, char **argv) {
         strcpy(port, argv[1]);
     else
         strcpy(port, "1018");
+    if (argc >= 3 && strcmp(argv[2], "-d") == 0) {
+        dbg_mode = 1;
+        printf("** DEBUG MODE ON **\nEach thread of server will sleep for 1 sec before processing the request.\n\n");
+    }
+
 
     listenfd = Open_listenfd(port);
     printf("%s is listening on port %s...\n\n", server_name, port);
@@ -134,6 +140,8 @@ void process(int connfd) {
     if (Rio_readlineb(&rio, buf, MAXLINE) == 0) return;
     printf("%s", buf);
     sscanf(buf, "%s %s %s", method, uri, version);
+
+    if (dbg_mode) sleep(1);
 
     if (strcasecmp(method, "GET") == 0) {
         skip_req_headers(&rio);

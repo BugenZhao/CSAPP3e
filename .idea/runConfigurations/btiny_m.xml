@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="btiny-m" type="CMakeRunConfiguration" factoryName="Application" WORKING_DIR="file://$PROJECT_DIR$/chapter12/btiny-m" PASS_PARENT_ENVS_2="true" PROJECT_NAME="BugenCSAPP3e" TARGET_NAME="btiny-m" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="BugenCSAPP3e" RUN_TARGET_NAME="btiny-m">
+  <configuration default="false" name="btiny-m" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="1018 -d" WORKING_DIR="file://$PROJECT_DIR$/chapter12/btiny-m" PASS_PARENT_ENVS_2="true" PROJECT_NAME="BugenCSAPP3e" TARGET_NAME="btiny-m" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="BugenCSAPP3e" RUN_TARGET_NAME="btiny-m">
     <method v="2">
       <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
     </method>
