@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "csapp.h"
 #include "proxy.h"
+#include "rio_p.h"
 
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
@@ -20,17 +21,16 @@ int main(int argc, char **argv) {
     pthread_t tid;
 
     Signal(SIGINT, bye);
-    Signal(SIGCHLD, sigchld_handler);
     // ignore broken pipe error caused by a prematurely closed connection
     Signal(SIGPIPE, SIG_IGN);
 
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s <port>\n", argv[0]);
-        exit(-1);
-    }
+    if (argc >= 2)
+        strcpy(port, argv[1]);
+    else
+        strcpy(port, "10188");
 
-    listenfd = Open_listenfd(argv[1]);
-    printf("%s is listening on port %s...\n\n", proxy_name, argv[1]);
+    listenfd = Open_listenfd(port);
+    printf("%s is listening on port %s...\n\n", proxy_name, port);
     fflush(stdout);
 
     sbuf_init(&sbuf, SBUFSIZE);
@@ -69,9 +69,12 @@ void process(int connfd) {
     int serverfd;
 
     Rio_readinitb(&rio, connfd);
+    memset(method, 0, sizeof(string));
+    memset(uri, 0, sizeof(string));
+    memset(version, 0, sizeof(string));
 
     // get HTTP header / request line
-    if (Rio_readlineb(&rio, buf, MAXLINE) == 0) return;
+    if (Rio_readlinebp(&rio, buf, MAXLINE) <= 0) return;
 
     printf("=> Source request:\n");
     printf("%s", buf);
@@ -82,19 +85,23 @@ void process(int connfd) {
         return;
     }
 
-    parse_uri(uri, &reqline);
+    if (parse_uri(uri, &reqline) < 0) {
+        client_error(connfd, uri, "501", "Not Implemented", "Protocol Not Implemented");
+        return;
+    }
     printf("[host: %s, port: %s, path: %s]\n", reqline.host, reqline.port, reqline.path);
 
     headers_cnt = parse_req_headers(&rio, &reqline, reqheaders);
+    if (headers_cnt == 0) return;
 
     serverfd = forward(&reqline, reqheaders, &rio, headers_cnt);
-    reply(serverfd, connfd);
+    if (serverfd > 0) reply(serverfd, connfd);
 }
 
 size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders) {
     string buf;
     char *ptr;
-    size_t idx = 4;
+    size_t idx = 5;
     int flag = 0;
     static const char *reserved[] = {"Host", "User-Agent", "Connection", "Proxy-Connection"};
 
@@ -107,8 +114,11 @@ size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders)
     strcpy(reqheaders[3].key, "Proxy-Connection");
     strcpy(reqheaders[3].value, "close\r\n");
 
+    strcpy(reqheaders[4].key, "BProxy");
+    strcpy(reqheaders[4].value, "(C) Bugen Zhao 2020\r\n");
+
     while (1) {
-        Rio_readlineb(rp, buf, MAXLINE);
+        if (Rio_readlinebp(rp, buf, MAXLINE) < 0) return 0;
         printf("%s", buf);
 
         if (strcmp(buf, "\r\n") == 0) {
@@ -120,7 +130,13 @@ size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders)
             exit(-1);
         }
         *ptr = '\0';
-        for (int i = 0; i < 4; ++i) {
+
+        if (strncasecmp(buf, reserved[0], strlen(reserved[0])) == 0) {
+            strcpy(reqheaders[0].value, ptr + 2);
+            continue;
+        }
+
+        for (int i = 1; i <= 3; ++i) {
             if (strncasecmp(buf, reserved[i], strlen(reserved[i])) == 0) {
                 flag = 1;
                 break;
@@ -139,73 +155,42 @@ size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders)
 }
 
 int parse_uri(string uri, reqline_t *reqline) {
-    char *ptr = uri;
+    string buf;
+    char *ptr = buf;
     char *port_p;
     char *slash_p;
-    int offset = strlen("http://");
+    int offset = 7;
 
+    strcpy(buf, uri);
+
+    // strcasestr() acts incorrectly on Linux
     if (strstr(ptr, "http://") != ptr) {
-        fprintf(stderr, "Not supported protocol: %s", uri);
-        exit(-1);
+        fprintf(stderr, "Not supported protocol: %s\n", uri);
+        return -1;
     }
+
     ptr += offset;
     port_p = strstr(ptr, ":");
     slash_p = strstr(ptr, "/");
+    if (slash_p == NULL) {
+        fprintf(stderr, "Invalid uri: %s", uri);
+        return -1;
+    }
 
-    if (port_p != NULL && (slash_p == NULL || port_p < slash_p)) {
-        ptr = strstr(port_p, "/");
-        strncpy(reqline->host, uri + offset, port_p - (uri + offset));
-        strncpy(reqline->port, port_p + 1, ptr - port_p - 1);
+    if (port_p != NULL && port_p < slash_p) {
+        *port_p = '\0';
+        *slash_p = '\0';
+        strcpy(reqline->host, ptr);
+        strcpy(reqline->port, port_p + 1);
     } else {
-        ptr = strstr(ptr, "/");
-        strncpy(reqline->host, uri + offset, ptr - (uri + offset));
+        *slash_p = '\0';
+        strcpy(reqline->host, ptr);
         strcpy(reqline->port, "80");
     }
-    strcpy(reqline->path, ptr);
+    *slash_p = '/';
+    strcpy(reqline->path, slash_p);
 
     return 0;
-}
-
-void serve_static(int connfd, string filename, int method) {
-    struct stat sbuf;
-    string filetype;
-    string buf;
-    int fd;
-    char *filebuf;
-    off_t filesize;
-
-    printf("Static content\n");
-
-    if (stat(filename, &sbuf) < 0) {
-        client_error(connfd, filename, "404", "Not Found", "Not Found");
-        return;
-    }
-    if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
-        client_error(connfd, filename, "403", "Forbidden", "No permission to read");
-        return;
-    }
-    filesize = sbuf.st_size;
-
-//    get_filetype(filename, filetype);
-    sprintf(buf, "HTTP/1.0 200 OK\r\n");
-    sprintf(buf, "%sServer: %s\r\n", buf, proxy_name);
-    sprintf(buf, "%sConnection: close\r\n", buf);
-    sprintf(buf, "%sContent-length: %llu\r\n", buf, filesize);
-    sprintf(buf, "%sContent-type: %s\r\n", buf, filetype);
-    sprintf(buf, "%s\r\n", buf); // IMPORTANT!
-    Rio_writenp(connfd, buf, strlen(buf));
-    printf("%s", buf);
-
-    if (method == HEAD) return;
-
-    fd = Open(filename, O_RDONLY, 0);
-    filebuf = Malloc(filesize);
-    Rio_readn(fd, filebuf, filesize);
-//    filebuf = Mmap(NULL, sbuf.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    Close(fd);
-    Rio_writenp(connfd, filebuf, filesize);
-//    Munmap(filebuf, filesize);
-    Free(filebuf);
 }
 
 void client_error(int connfd, string cause, string errnum, string msg, string disc) {
@@ -244,8 +229,9 @@ int forward(reqline_t *reqline, reqheader_t *reqheaders, rio_t *contentp, size_t
 
     printf("=> Forward request:\n%s", buf);
 
-    fd = Open_clientfd(reqline->host, reqline->port);
-    Rio_writen(fd, buf, MAXLINE);
+    fd = Open_clientfdp(reqline->host, reqline->port);
+    if (fd < 0) return 0;
+    Rio_writenp(fd, buf, MAXLINE);
     return fd;
 }
 
@@ -256,8 +242,10 @@ void reply(int serverfd, int clientfd) {
     int total = 0;
 
     Rio_readinitb(&rio, serverfd);
-    while ((n = Rio_readlineb(&rio, buf, MAXLINE))) {
-        Rio_writen(clientfd, buf, n);
+    while ((n = Rio_readlinebp(&rio, buf, MAXLINE))) {
+        // Connection reset
+        if (n < 0) return;
+        Rio_writenp(clientfd, buf, n);
         total += n;
     }
 

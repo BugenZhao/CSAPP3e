@@ -43,42 +43,25 @@ typedef struct {
     string value;
 } reqheader_t;
 
-const char proxy_name[] = "BTiny-m Proxy";
+const char proxy_name[] = "BProxy";
 const char *methods[] = {"GET", "POST", "HEAD"};
 
 sbuf_t sbuf;
-
-extern void Rio_writenp(int fd, void *usrbuf, size_t n);
 
 void bye(int sig) {
     printf("Bye\n");
     exit(0);
 }
 
-void sigchld_handler(int sig) {
-    int old_errno = errno;
-    pid_t pid;
-    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0);
-    errno = old_errno;
-}
-
 void *thread(void *vargp);
 
 void process(int connfd);
-
-void skip_req_headers(rio_t *rp);
 
 size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders);
 
 int parse_uri(string uri, reqline_t *reqline);
 
-void serve_static(int connfd, string filename, int method);
-
-void serve_dynamic(int connfd, string filename, string cgiargs, int method);
-
 void client_error(int connfd, string cause, string errnum, string msg, string disc);
-
-void get_filetype(string filename, string filetype);
 
 int forward(reqline_t *reqline, reqheader_t *reqheaders, rio_t *contentp, size_t headers_cnt);
 
