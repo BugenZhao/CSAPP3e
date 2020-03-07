@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
         strcpy(port, "1018");
 
     listenfd = Open_listenfd(port);
-    printf("%s is listening on port %s...\n", server_name, port);
+    printf("%s is listening on port %s...\n\n", server_name, port);
     fflush(stdout);
     strcat(open_cmd, port);
 
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
         connfd = Accept(listenfd, (SA *) &clientaddr, &clientlen);
         Getnameinfo((SA *) &clientaddr, clientlen, host, MAXLINE, serv, MAXLINE, 0);
         sbuf_insert(&sbuf, connfd);
-        printf("Accept connection %d from %s:%s\n", connfd, host, serv);
+        printf("=> Accept connection %d from %s:%s\n", connfd, host, serv);
 //        process(connfd);
 //        Close(connfd); // only the main process close the socket file
 //        printf("Close connection from %s:%s\n\n\n", host, serv);
@@ -117,7 +117,7 @@ void *thread(void *vargp) {
         connfd = sbuf_remove(&sbuf);
         process(connfd);
         Close(connfd);
-        printf("Close connection %d\n\n\n", connfd);
+        printf("=> Close connection %d\n\n", connfd);
     }
 }
 
@@ -166,6 +166,7 @@ void skip_req_headers(rio_t *rp) {
     string buf;
     do {
         Rio_readlineb(rp, buf, MAXLINE);
+        printf("%s", buf);
     } while (strcmp(buf, "\r\n") != 0);
 }
 
@@ -178,6 +179,7 @@ size_t read_req_headers(rio_t *rp) {
         Rio_readlineb(rp, buf, MAXLINE);
         if (strncasecmp(buf, "Content-length:", 15) == 0)
             sscanf(buf + 15, "%lu", &length);
+        printf("%s", buf);
     } while (strcmp(buf, "\r\n") != 0);
 
     return length;
@@ -219,7 +221,7 @@ void serve_static(int connfd, string filename, int method) {
     char *filebuf;
     off_t filesize;
 
-    printf("Static content\n");
+    printf("=> Static content\n");
 
     if (stat(filename, &sbuf) < 0) {
         client_error(connfd, filename, "404", "Not Found", "Not Found");
@@ -259,7 +261,7 @@ void serve_dynamic(int connfd, string filename, string cgiargs, int method) {
     string buf;
     char **argv = {NULL};
 
-    printf("Dynamic content\n");
+    printf("=> Dynamic content\n");
 
     if (stat(filename, &sbuf) < 0) {
         client_error(connfd, filename, "404", "Not Found", "Not Found");
