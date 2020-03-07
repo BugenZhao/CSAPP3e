@@ -23,7 +23,7 @@
 ➖ Performance Lab  
 ✔️ Shell Lab  
 ✔️ Malloc Lab  
-➖ Proxy Lab  
+✔️ Proxy Lab  
 
 ## Addition
 ✔️ Semaphore Libraries Support for macOS  
