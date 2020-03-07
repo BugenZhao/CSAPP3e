@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
         Pthread_create(&tid, NULL, thread, NULL);
     }
 
+
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *) &clientaddr, &clientlen);
@@ -55,7 +56,7 @@ void *thread(void *vargp) {
         connfd = sbuf_remove(&sbuf);
         process(connfd);
         Close(connfd);
-        printf("=> Close connection %d\n\n\n", connfd);
+        printf("=> Close connection %d\n\n", connfd);
     }
 }
 
@@ -100,7 +101,7 @@ void process(int connfd) {
     if (serverfd > 0) {
         reply(serverfd, connfd);
         Close(serverfd);
-        printf("=> Close connection %d\n\n\n", connfd);
+        printf("=> Close connection %d\n\n", serverfd);
     }
 }
 
@@ -264,4 +265,73 @@ void reply(int serverfd, int clientfd) {
     }
 
     printf("=> Replied %d bytes\n", total);
+}
+
+char *cache_read_pre(string uri) {
+    int i;
+
+    // TODO: not accurate
+    P(cache.glb_mutex);
+    cache.timestamp++;
+    V(cache.glb_mutex);
+
+    for (i = 0; i < CACHE_OBJS_CNT; ++i) {
+        if (!cache_empty(i) && strcmp(uri, cache.blocks[i].cache_uri) == 0) {
+            P(cache.blocks[i].cnt_mutex);
+            cache.blocks[i].lru = cache.timestamp;
+            cache.blocks[i].reader_cnt++;
+            if (cache.blocks[i].reader_cnt == 1)
+                P(cache.blocks[i].wmutex);
+            V(cache.blocks[i].cnt_mutex);
+            return cache.blocks[i].cache_obj;
+        }
+    }
+    return NULL;
+}
+
+void cache_read_post(string uri) {
+    int i;
+    for (i = 0; i < CACHE_OBJS_CNT; ++i) {
+        if (!cache_empty(i) && strcmp(uri, cache.blocks[i].cache_uri) == 0) {
+            P(cache.blocks[i].cnt_mutex);
+            cache.blocks[i].reader_cnt--;
+            if (cache.blocks[i].reader_cnt == 0)
+                V(cache.blocks[i].wmutex);
+            V(cache.blocks[i].cnt_mutex);
+            return;
+        }
+    }
+    unix_error("Cache error");
+}
+
+void cache_insert(string uri, char *data, size_t n) {
+    int i, j;
+    ull lru = -1;
+    if (n > MAX_OBJECT_SIZE) return;
+
+    for (i = 0; i < CACHE_OBJS_CNT; ++i) {
+        if (!cache_empty(i) && strcmp(uri, cache.blocks[i].cache_uri) == 0)
+            break;
+    }
+    if (i == CACHE_OBJS_CNT) {
+        i = 0;
+        if (cache_full()) {
+            for (j = 0; j < MAX_OBJECT_SIZE; ++j)
+                if (cache.blocks[j].lru < lru) {
+                    lru = cache.blocks[j].lru;
+                    i = j;
+                }
+        } else {
+            while (!cache_empty(i)) i++;
+        }
+    }
+
+    P(cache.blocks[i].wmutex);
+    P(cache.glb_mutex);
+    cache_set(i);
+    V(cache.glb_mutex);
+    strcpy(cache.blocks[i].cache_uri, uri);
+    strncpy(cache.blocks[i].cache_obj, data, n);
+    cache.blocks[i].lru = cache.timestamp;
+    V(cache.blocks[i].wmutex);
 }
