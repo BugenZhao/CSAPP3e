@@ -2,6 +2,12 @@
 // Created by Bugen Zhao on 2020/3/7.
 //
 
+/*
+ * A pre-threaded version of BTiny Web Server
+ */
+
+// TODO: dynamically increase or decrease the number of threads
+
 #include "csapp.h"
 #include "sbuf.h"
 

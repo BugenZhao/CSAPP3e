@@ -1,8 +1,12 @@
 //
-// Created by Bugen Zhao on 2020/2/29.
+// Created by Bugen Zhao on 2020/3/7.
 //
 
-// TODO: safer writes and clean PIPE errors handling
+/*
+ * A multi-process version of BTiny Web Server
+ * (not robust)
+ * TODO: for safer writes and clean PIPE errors handling, refer to btiny-m.c
+ */
 
 #include "csapp.h"
 
