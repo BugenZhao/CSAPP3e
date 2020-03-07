@@ -65,7 +65,8 @@ void process(int connfd) {
     rio_t rio;
     reqline_t reqline;
     reqheader_t reqheaders[32];
-    size_t headers_cnt;
+    size_t headers_cnt = 0;
+    size_t content_len = 0;
     int serverfd;
 
     Rio_readinitb(&rio, connfd);
@@ -80,7 +81,8 @@ void process(int connfd) {
     printf("%s", buf);
     sscanf(buf, "%s %s %s", method, uri, version);
 
-    if (strcasecmp(method, "GET") != 0) {
+    strcpy(reqline.method, method);
+    if (strcasecmp(method, "GET") != 0 && strcasecmp(method, "POST") != 0 && strcasecmp(method, "HEAD") != 0) {
         client_error(connfd, method, "501", "Not Implemented", "Not Implemented");
         return;
     }
@@ -91,14 +93,18 @@ void process(int connfd) {
     }
     printf("[host: %s, port: %s, path: %s]\n", reqline.host, reqline.port, reqline.path);
 
-    headers_cnt = parse_req_headers(&rio, &reqline, reqheaders);
+    headers_cnt = parse_req_headers(&rio, &reqline, reqheaders, &content_len);
     if (headers_cnt == 0) return;
 
-    serverfd = forward(&reqline, reqheaders, &rio, headers_cnt);
-    if (serverfd > 0) reply(serverfd, connfd);
+    serverfd = forward(&reqline, reqheaders, headers_cnt, &rio, content_len);
+    if (serverfd > 0) {
+        reply(serverfd, connfd);
+        Close(serverfd);
+        printf("=> Close connection %d\n\n\n", connfd);
+    }
 }
 
-size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders) {
+size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders, size_t *content_len) {
     string buf;
     char *ptr;
     size_t idx = 5;
@@ -146,8 +152,12 @@ size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders)
             flag = 0;
             continue;
         }
+
         strcpy(reqheaders[idx].key, buf);
         strcpy(reqheaders[idx].value, ptr + 2);
+        if (strncasecmp(reqheaders[idx].key, "Content-Length", 14) == 0) {
+            if (content_len) *content_len = atoi(reqheaders[idx].value);
+        }
         idx++;
     }
 
@@ -197,7 +207,7 @@ void client_error(int connfd, string cause, string errnum, string msg, string di
     string html, buf;
     ull len;
 
-    printf("Client error %s\n", errnum);
+    printf("=> Client error %s\n", errnum);
 
     sprintf(html, "<h1>%s %s</h1><p>%s: %s</p><em>%s</em>", errnum, msg, disc, cause, proxy_name);
     len = strlen(html);
@@ -209,29 +219,33 @@ void client_error(int connfd, string cause, string errnum, string msg, string di
     sprintf(buf, "%sContent-type: text/html\r\n", buf);
     sprintf(buf, "%s\r\n", buf); // IMPORTANT!
     Rio_writenp(connfd, buf, strlen(buf));
-    printf("%s", buf);
 
     Rio_writenp(connfd, html, len);
 }
 
-int forward(reqline_t *reqline, reqheader_t *reqheaders, rio_t *contentp, size_t headers_cnt) {
+int forward(reqline_t *reqline, reqheader_t *reqheaders, size_t headers_cnt, rio_t *contentp, size_t content_len) {
     int fd;
     int i;
     string buf;
 
-    sprintf(buf, "GET %s HTTP/1.0\r\n", reqline->path);
+    sprintf(buf, "%s %s HTTP/1.0\r\n", reqline->method, reqline->path);
     for (i = 0; i < headers_cnt; ++i)
         sprintf(buf, "%s%s: %s", buf, reqheaders[i].key, reqheaders[i].value);
     strcat(buf, "\r\n");
-
-    // TODO: support POST
-//    Rio_readnb(contentp, buf + strlen(buf), MAXLINE);
 
     printf("=> Forward request:\n%s", buf);
 
     fd = Open_clientfdp(reqline->host, reqline->port);
     if (fd < 0) return 0;
-    Rio_writenp(fd, buf, MAXLINE);
+    Rio_writenp(fd, buf, strlen(buf));
+
+    // for POST
+    if (content_len > 0) {
+        printf("<Contents> (%zd bytes)\n\n", content_len);
+        Rio_readnb(contentp, buf, content_len);
+        Rio_writenp(fd, buf, content_len);
+    }
+
     return fd;
 }
 

@@ -33,6 +33,7 @@ typedef char string[MAXLINE];
 typedef unsigned long long ull;
 
 typedef struct {
+    char method[10];
     string host;
     char port[PORTLEN];
     string path;
@@ -57,13 +58,13 @@ void *thread(void *vargp);
 
 void process(int connfd);
 
-size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders);
+size_t parse_req_headers(rio_t *rp, reqline_t *reqline, reqheader_t *reqheaders, size_t *content_len);
 
 int parse_uri(string uri, reqline_t *reqline);
 
 void client_error(int connfd, string cause, string errnum, string msg, string disc);
 
-int forward(reqline_t *reqline, reqheader_t *reqheaders, rio_t *contentp, size_t headers_cnt);
+int forward(reqline_t *reqline, reqheader_t *reqheaders, size_t headers_cnt, rio_t *contentp, size_t content_len);
 
 void reply(int serverfd, int clientfd);
 
