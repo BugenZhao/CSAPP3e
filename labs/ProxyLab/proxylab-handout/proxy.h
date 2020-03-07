@@ -15,7 +15,9 @@
 
 /* You won't lose style points for including this long line in your code */
 static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
-static const char *user_agent_val = "Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
+static const char *user_agent_val = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) "
+                                    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.5 Safari/605.1.15 "
+                                    "BugenProxy\r\n";
 
 #define PORTLEN 6
 #define KEYLEN 64
@@ -29,7 +31,6 @@ static const char *user_agent_val = "Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) 
 
 #define NTHREADS 8
 #define SBUFSIZE (2*NTHREADS)
-
 
 typedef char string[MAXLINE];
 typedef char cobj_t[MAX_OBJECT_SIZE];
@@ -88,27 +89,9 @@ void client_error(int connfd, string cause, string errnum, string msg, string di
 
 int forward(reqline_t *reqline, reqheader_t *reqheaders, size_t headers_cnt, rio_t *contentp, size_t content_len);
 
-void reply(int serverfd, int clientfd, string uri, int cache);
+void reply(int serverfd, int clientfd, string uri, int allow_cache);
 
-void cache_init() {
-    int i;
-    string buf;
-
-    cache.status = 0;
-    cache.timestamp = 0;
-    cache.glb_mutex = Sem_open_and_unlink("/_brpoxy_glb_mutex", 1);
-    for (i = 0; i < CACHE_OBJS_CNT; ++i) {
-        cache.blocks[i].lru = 0;
-        cache.blocks[i].reader_cnt = 0;
-        cache.blocks[i].len = 0;
-        sprintf(buf, "/_bproxy_wmutex_%d", i);
-        cache.blocks[i].wmutex = Sem_open_and_unlink(buf, 1);
-        sprintf(buf, "/_bproxy_cnt_mutex_%d", i);
-        cache.blocks[i].cnt_mutex = Sem_open_and_unlink(buf, 1);
-        memset(cache.blocks[i].cache_uri, 0, MAXLINE);
-        memset(cache.blocks[i].cache_obj, 0, MAX_OBJECT_SIZE);
-    }
-}
+void cache_init();
 
 int cache_full() {
     return cache.status == (1 << CACHE_OBJS_CNT) - 1;
@@ -126,7 +109,7 @@ void cache_clr(unsigned i) {
     cache.status &= ~(1u << i);
 }
 
-cache_block_t * cache_read_pre(string uri);
+cache_block_t *cache_read_pre(string uri);
 
 void cache_read_post(string uri);
 
