@@ -1,1 +1,1 @@
-add_library(libbzcsapp STATIC bzcsapp.c)
+add_library(libbzcsapp STATIC bzcsapp.c sbuf.c)
