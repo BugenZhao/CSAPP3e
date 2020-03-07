@@ -23,6 +23,7 @@ link_libraries(libbzcsapp)
 add_subdirectory(labs/CacheLab/cachelab-handout)
 add_subdirectory(labs/ShellLab/shlab-handout)
 add_subdirectory(labs/MallocLab/malloclab-handout)
+add_subdirectory(labs/ProxyLab/proxylab-handout)
 
 add_subdirectory(chapter11/btiny)
 add_subdirectory(chapter12/readers-writers)
