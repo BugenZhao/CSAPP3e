@@ -50,6 +50,7 @@ typedef struct {
 typedef struct {
     cobj_t cache_obj;
     string cache_uri;
+    size_t len;
     ull lru;
     int reader_cnt;
     sem_t *wmutex;
@@ -87,7 +88,7 @@ void client_error(int connfd, string cause, string errnum, string msg, string di
 
 int forward(reqline_t *reqline, reqheader_t *reqheaders, size_t headers_cnt, rio_t *contentp, size_t content_len);
 
-void reply(int serverfd, int clientfd);
+void reply(int serverfd, int clientfd, string uri, int cache);
 
 void cache_init() {
     int i;
@@ -99,30 +100,33 @@ void cache_init() {
     for (i = 0; i < CACHE_OBJS_CNT; ++i) {
         cache.blocks[i].lru = 0;
         cache.blocks[i].reader_cnt = 0;
+        cache.blocks[i].len = 0;
         sprintf(buf, "/_bproxy_wmutex_%d", i);
         cache.blocks[i].wmutex = Sem_open_and_unlink(buf, 1);
         sprintf(buf, "/_bproxy_cnt_mutex_%d", i);
         cache.blocks[i].cnt_mutex = Sem_open_and_unlink(buf, 1);
+        memset(cache.blocks[i].cache_uri, 0, MAXLINE);
+        memset(cache.blocks[i].cache_obj, 0, MAX_OBJECT_SIZE);
     }
 }
 
-inline int cache_full() {
+int cache_full() {
     return cache.status == (1 << CACHE_OBJS_CNT) - 1;
 }
 
-inline int cache_empty(unsigned i) {
+int cache_empty(unsigned i) {
     return (cache.status & (1u << i)) == 0;
 }
 
-inline void cache_set(unsigned i) {
+void cache_set(unsigned i) {
     cache.status |= (1u << i);
 }
 
-inline void cache_clr(unsigned i) {
+void cache_clr(unsigned i) {
     cache.status &= ~(1u << i);
 }
 
-char *cache_read_pre(string uri);
+cache_block_t * cache_read_pre(string uri);
 
 void cache_read_post(string uri);
 

@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     for (i = 0; i < NTHREADS; ++i) {
         Pthread_create(&tid, NULL, thread, NULL);
     }
-
+    cache_init();
 
     while (1) {
         clientlen = sizeof(clientaddr);
@@ -68,12 +68,13 @@ void process(int connfd) {
     reqheader_t reqheaders[32];
     size_t headers_cnt = 0;
     size_t content_len = 0;
+    cache_block_t *cache_block;
     int serverfd;
 
     Rio_readinitb(&rio, connfd);
-    memset(method, 0, sizeof(string));
-    memset(uri, 0, sizeof(string));
-    memset(version, 0, sizeof(string));
+//    memset(method, 0, sizeof(string));
+//    memset(uri, 0, sizeof(string));
+//    memset(version, 0, sizeof(string));
 
     // get HTTP header / request line
     if (Rio_readlinebp(&rio, buf, MAXLINE) <= 0) return;
@@ -88,6 +89,14 @@ void process(int connfd) {
         return;
     }
 
+    cache_block = cache_read_pre(uri);
+    if (cache_block != NULL) {
+        Rio_writenp(connfd, cache_block->cache_obj, cache_block->len);
+        printf("=> Replied %zd bytes from cache\n", cache_block->len);
+        cache_read_post(uri);
+        return;
+    }
+
     if (parse_uri(uri, &reqline) < 0) {
         client_error(connfd, uri, "501", "Not Implemented", "Protocol Not Implemented");
         return;
@@ -99,7 +108,7 @@ void process(int connfd) {
 
     serverfd = forward(&reqline, reqheaders, headers_cnt, &rio, content_len);
     if (serverfd > 0) {
-        reply(serverfd, connfd);
+        reply(serverfd, connfd, uri, strcasecmp(method, "GET") == 0);
         Close(serverfd);
         printf("=> Close connection %d\n\n", serverfd);
     }
@@ -250,24 +259,30 @@ int forward(reqline_t *reqline, reqheader_t *reqheaders, size_t headers_cnt, rio
     return fd;
 }
 
-void reply(int serverfd, int clientfd) {
+void reply(int serverfd, int clientfd, string uri, int cache) {
     rio_t rio;
     char buf[MAXLINE];
+    char obj[MAX_OBJECT_SIZE];
     int n = 0;
     int total = 0;
 
     Rio_readinitb(&rio, serverfd);
-    while ((n = Rio_readlinebp(&rio, buf, MAXLINE))) {
+    while ((n = Rio_readnb(&rio, buf, MAXLINE))) {
         // Connection reset
         if (n < 0) return;
         Rio_writenp(clientfd, buf, n);
+        if (total + n < MAX_OBJECT_SIZE) memcpy(obj + total, buf, n);
         total += n;
+    }
+    if (cache && total < MAX_OBJECT_SIZE) {
+        cache_insert(uri, obj, total);
+        printf("=> Cached %d bytes\n", total);
     }
 
     printf("=> Replied %d bytes\n", total);
 }
 
-char *cache_read_pre(string uri) {
+cache_block_t *cache_read_pre(string uri) {
     int i;
 
     // TODO: not accurate
@@ -279,11 +294,11 @@ char *cache_read_pre(string uri) {
         if (!cache_empty(i) && strcmp(uri, cache.blocks[i].cache_uri) == 0) {
             P(cache.blocks[i].cnt_mutex);
             cache.blocks[i].lru = cache.timestamp;
-            cache.blocks[i].reader_cnt++;
+            cache.blocks[i].reader_cnt += 1;
             if (cache.blocks[i].reader_cnt == 1)
                 P(cache.blocks[i].wmutex);
             V(cache.blocks[i].cnt_mutex);
-            return cache.blocks[i].cache_obj;
+            return cache.blocks + i;
         }
     }
     return NULL;
@@ -294,7 +309,7 @@ void cache_read_post(string uri) {
     for (i = 0; i < CACHE_OBJS_CNT; ++i) {
         if (!cache_empty(i) && strcmp(uri, cache.blocks[i].cache_uri) == 0) {
             P(cache.blocks[i].cnt_mutex);
-            cache.blocks[i].reader_cnt--;
+            cache.blocks[i].reader_cnt -= 1;
             if (cache.blocks[i].reader_cnt == 0)
                 V(cache.blocks[i].wmutex);
             V(cache.blocks[i].cnt_mutex);
@@ -316,7 +331,7 @@ void cache_insert(string uri, char *data, size_t n) {
     if (i == CACHE_OBJS_CNT) {
         i = 0;
         if (cache_full()) {
-            for (j = 0; j < MAX_OBJECT_SIZE; ++j)
+            for (j = 0; j < CACHE_OBJS_CNT; ++j)
                 if (cache.blocks[j].lru < lru) {
                     lru = cache.blocks[j].lru;
                     i = j;
@@ -330,8 +345,14 @@ void cache_insert(string uri, char *data, size_t n) {
     P(cache.glb_mutex);
     cache_set(i);
     V(cache.glb_mutex);
+
+    // CRITICAL: use memcpy() to avoid annoying '\0' problem!
+    memset(cache.blocks[i].cache_uri, 0, MAXLINE);
     strcpy(cache.blocks[i].cache_uri, uri);
-    strncpy(cache.blocks[i].cache_obj, data, n);
+    memset(cache.blocks[i].cache_obj, 0, MAX_OBJECT_SIZE);
+    memcpy(cache.blocks[i].cache_obj, data, n);
+
+    cache.blocks[i].len = n;
     cache.blocks[i].lru = cache.timestamp;
     V(cache.blocks[i].wmutex);
 }
