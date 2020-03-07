@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="btiny-p" type="CMakeRunConfiguration" factoryName="Application" WORKING_DIR="file://$PROJECT_DIR$/chapter12/btiny-p" PASS_PARENT_ENVS_2="true" PROJECT_NAME="BugenCSAPP3e" TARGET_NAME="btiny-p" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="BugenCSAPP3e" RUN_TARGET_NAME="btiny-p">
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
