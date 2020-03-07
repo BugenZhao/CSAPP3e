@@ -12,7 +12,7 @@
 ✔️ 09: Virtual Memory  
 ✔️ 10: System-Level I/O  
 ✔️ 11: Network Programming  
-➖ 12: Concurrent Programming  
+✔️ 12: Concurrent Programming  
 
 ## Labs
 ✔️ Data Lab  
@@ -24,3 +24,7 @@
 ✔️ Shell Lab  
 ✔️ Malloc Lab  
 ➖ Proxy Lab  
+
+## Addition
+✔️ Semaphore Libraries Support for macOS  
+✔️ Concurrent TINY Web Server  
