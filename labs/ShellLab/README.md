@@ -6,7 +6,7 @@
 
 - 按照 Writeup 的要求，`waitfg` 中不调用 `waitpid()`, 直接通过循环调用 `sleep` 等待接收到 `SIGCHLD` 后 `handler` 回收子进程。
 
-- `sigchld_handler` 中使用 `pid = waitpid(-1, &status, WNOHANG | WUNTRACED)` 回收， 其效果是 "*立即返回*，若有子进程停止或种植，返回其 PID，否则返回 0 "，因此可以通过 while 循环调用回收所有僵死进程。涉及到全局数据结构的读写时，临时屏蔽所有信号。
+- `sigchld_handler` 中使用 `pid = waitpid(-1, &status, WNOHANG | WUNTRACED)` 回收， 其效果是 "*立即返回*，若有子进程停止或终止，返回其 PID，否则返回 0 "，因此可以通过 while 循环调用回收所有僵死进程。涉及到全局数据结构的读写时，临时屏蔽所有信号。
 
 - `sigint_handler` 和 `sigtstp_handler` 中，应注意使用 `kill(-pid, SIGXXXX)` 将信号转发到整个任务组。
 
