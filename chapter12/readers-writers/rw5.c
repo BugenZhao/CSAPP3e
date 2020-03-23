@@ -4,10 +4,11 @@
 
 #include "rw.h"
 
-const char desc[80] = "RW2 - Priority to writers - Problematic";
+const char desc[80] = "RW2 - Priority to writers - Better";
 
 int writecnt;
-sem_t *mutex, *w, *wmutex;
+int readcnt;
+sem_t *wcmutex, *rcmutex, *w, *r;
 
 int writetimes;
 int readtimes;
@@ -19,22 +20,31 @@ void reader() {
     int i = 10000;
 
     while (i--) {
-        if (writecnt > 0) continue;
+        P(r);
+        P(rcmutex);
+        readcnt++;
+        if (readcnt == 1) P(w);
+        V(rcmutex);
 
-        P(mutex);
         readtimes++;
-        V(mutex);
+
+        V(r);
 
         // Reading...
 
+        P(rcmutex);
+        readcnt--;
+        if (readcnt == 0) V(w);
+        V(rcmutex);
     }
 }
 
 void writer() {
     while (1) {
-        P(wmutex);
+        P(wcmutex);
         writecnt++;
-        V(wmutex);
+        if (writecnt == 1) P(r); // do not read anymore
+        V(wcmutex);
 
         P(w);
 
@@ -50,6 +60,11 @@ void writer() {
         writecnt--;
 
         V(w);
+
+        P(wcmutex);
+        writecnt--;
+        if (writecnt == 0) V(r);
+        V(wcmutex);
     }
 }
 
@@ -64,12 +79,14 @@ void init() {
     sem_unlink("/bz_mutex_");
     sem_unlink("/bz_w_");
 #else
-    mutex = Sem_open_and_unlink("/bz_mutex_", 1);
+    rcmutex = Sem_open_and_unlink("/bz_rc_mutex_", 1);
+    wcmutex = Sem_open_and_unlink("bz_wc_mutex_", 1);
+    r = Sem_open_and_unlink("/bz_r_", 1);
     w = Sem_open_and_unlink("/bz_w_", 1);
-    wmutex = Sem_open_and_unlink("bz_mutex_", 1);
 #endif
     readtimes = 0;
     writetimes = 0;
+    readcnt = 0;
     writecnt = 0;
 }
 
