@@ -343,7 +343,7 @@ int floatFloat2Int(unsigned uf) {
     unsigned sgn = uf >> 31;
     if (uf == 0) return 0;
     if (exp < 0) return 0;
-    if (exp > 31) return 0x80000000;
+    if (exp >= 31) return 0x80000000;               // exp = 31 -> inf, -inf, NaN
     if (exp <= 23) frc >>= (23 - exp);              // convert frc part to int
     else frc <<= (exp - 23);
 
