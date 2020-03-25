@@ -349,9 +349,8 @@ int floatFloat2Int(unsigned uf) {
     if (exp <= 23) frc >>= (23 - exp);              // convert frc part to int
     else frc <<= (exp - 23);
 
-    if ((frc >> 31) == sgn) return frc;             // correct sign
-    else if (frc >> 31) return 0x80000000;          // sgn = 0, frc is neg? overflow
-    else return ~frc + 1;                           // real neg
+    if (!sgn) return frc;                           // pos
+    else return -frc;                               // neg
 }
 
 /*

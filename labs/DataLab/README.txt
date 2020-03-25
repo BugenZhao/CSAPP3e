@@ -11,7 +11,7 @@ Points	Rating	Errors	Points	Ops	Puzzle
 4	4	0	2	5	logicalNeg
 4	4	0	2	37	howManyBits
 4	4	0	2	13	floatScale2
-4	4	0	2	19	floatFloat2Int
+4	4	0	2	16	floatFloat2Int
 4	4	0	2	12	floatPower2
 
-Score = 62/62 [36/36 Corr + 26/26 Perf] (146 total operators)
+Score = 62/62 [36/36 Corr + 26/26 Perf] (143 total operators)
