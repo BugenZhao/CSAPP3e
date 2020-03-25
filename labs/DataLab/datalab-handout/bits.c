@@ -343,7 +343,9 @@ int floatFloat2Int(unsigned uf) {
     unsigned sgn = uf >> 31;
     if (uf == 0) return 0;
     if (exp < 0) return 0;
-    if (exp >= 31) return 0x80000000;               // exp = 31 -> inf, -inf, NaN
+    if (exp >= 31) return 0x80000000;               // exp = 31 -> overflow
+    // We must return 0x8000_0000 when exp = 31
+    //  otherwise, consider 0b1_10011110_00000000000000000000001
     if (exp <= 23) frc >>= (23 - exp);              // convert frc part to int
     else frc <<= (exp - 23);
 
