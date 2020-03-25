@@ -46,7 +46,7 @@ void writer() {
         if (writecnt == 1) P(r); // do not read anymore
         V(wcmutex);
 
-        P(w);
+        P(w); // all readers are finished
 
         // Writing...
 
